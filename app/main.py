@@ -7,7 +7,7 @@ from fastapi.staticfiles import StaticFiles
 
 from app import config, db, events
 from app.api import dashboard, debug
-from app.channels import email_agentmail, web, whatsapp_twilio
+from app.channels import email_agentmail, voice, web, whatsapp_twilio
 
 
 @asynccontextmanager
@@ -19,6 +19,7 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title=config.PRODUCT_NAME, lifespan=lifespan)
 app.include_router(web.router)
+app.include_router(voice.router)
 app.include_router(debug.router)
 app.include_router(dashboard.router)
 app.include_router(whatsapp_twilio.router)
