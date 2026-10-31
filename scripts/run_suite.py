@@ -199,7 +199,7 @@ def run_case(base: str, case: dict[str, Any]) -> dict[str, Any]:
     t = r.ticket()
     return {"name": case["name"], "area": case["area"], "passed": not failures and not viol, "failures": failures,
             "violations": viol, "latencies": [round(x, 2) for x in r.latencies], "lanes": r.lanes, "notes": r.notes,
-            "escalated": bool((t or {}).get("escalation")), "expects_escalation": any(c[0] == "escalated" for c in case["expect"]),
+            "escalated": bool((t or {}).get("escalation")), "expects_escalation": case.get("escalates", False) or any(c[0] == "escalated" for c in case["expect"]),
             "resolves": case.get("resolves", False), "error": error}
 
 

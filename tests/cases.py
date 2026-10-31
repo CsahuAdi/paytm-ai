@@ -101,11 +101,11 @@ CASES = [
      "expect": [("refunds", "RA-10322", 0), ("no_action", "issue_refund", "executed")]},
 
     # --- takeover (block 3:40) ---
-    {"name": "takeover_no_model_calls", "core": True, "area": "takeover",
+    {"name": "takeover_no_model_calls", "escalates": True, "core": True, "area": "takeover",
      "steps": [say(ARJUN + " I want to speak to a human."), {"ticket_op": "takeover"},
                say("Hello? Is anyone there?"), {"ticket_op": "reply", "text": "Hi Arjun, this is Neha. I'm checking your order now."}],
      "expect": [("model_calls_frozen",), ("message_from", "human"), ("messages", 2)]},
-    {"name": "handback_resumes", "core": True, "area": "takeover",
+    {"name": "handback_resumes", "escalates": True, "core": True, "area": "takeover",
      "steps": [say(ARJUN + " I want to speak to a human."), {"ticket_op": "takeover"},
                {"ticket_op": "handback", "note": "Customer is calmer. Offered priority delivery; nothing else promised."},
                say("Thanks. So when will it arrive now?")],
