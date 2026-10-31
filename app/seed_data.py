@@ -227,6 +227,9 @@ def _scenario_data() -> dict[str, list[dict]]:
 
 
 async def reset(demo_contacts: bool = True) -> dict[str, int]:
+    if config.PACK:  # a domain pack brings its own seed.json and database
+        from app import registry
+        return await registry.RUNTIME.reset()
     for name in COLLECTIONS:
         await store.db[name].delete_many({})
     await store.ensure_indexes()

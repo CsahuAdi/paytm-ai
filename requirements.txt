@@ -8,6 +8,7 @@ pymongo==4.19.0
 pytest==9.2.0
 python-dotenv==1.2.4
 python-multipart==0.0.32
+pyyaml==6.0.3
 sarvamai==0.1.41
 svix==2.9.1
 twilio==9.12.0

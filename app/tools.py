@@ -245,6 +245,9 @@ async def propose(ctx: Ctx, tool: str, args: dict[str, Any]) -> dict[str, Any]:
 
 async def run_action(action: dict[str, Any], approved: bool = False) -> dict[str, Any]:
     """Executor for an action already moved to `executing`. Re-checks deny rules against current data."""
+    from app import registry  # lazy: registry imports this module
+    if registry.RUNTIME and action["tool"] in registry.RUNTIME.tools:
+        return await registry.RUNTIME.run(action, approved=approved)
     customer = await store.db.customers.find_one({"_id": action["customer_id"]})
     ticket = await store.db.tickets.find_one({"_id": action["ticket_id"]})
     identity = {"verified": True, "attempts": 0}

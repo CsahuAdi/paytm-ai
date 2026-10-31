@@ -1,0 +1,81 @@
+# Librarian pack: configuration only, no Python. The engine supplies channels, language, LLM router,
+# verification flow, rules evaluation, approvals, takeover, audit log and idempotency.
+name: librarian
+product: Riverside Library Desk
+persona: You are the front-desk assistant of Riverside Public Library (a fake library used for this demo).
+policy_file: policy.md
+default_language: en-IN
+labels: {subject: member, primary: loans, money: fines}
+
+verification:
+  param: member_id
+  param_description: Library member ID, e.g. M-1001
+  lookup: {collection: customers, field: member_id}
+  factors: {text: phone_last4, voice: phone_last4}
+  factor_description: Last 4 digits of the phone number on the membership
+
+collections:
+  loans: {owner_field: member_id}
+  fines: {owner_field: member_id}
+  books: {}
+
+facts: [loan_id, fine_id, book_title, date, amount]
+escalation_reasons: [lost_book_dispute, harassment, distress, customer_requested_human]
+
+context:
+  in_scope:
+    - {collection: loans, filter: {status: active}, fields: [loan_id, title, due_date, renewals, reserved_by_other], limit: 5}
+    - {collection: fines, filter: {status: unpaid}, fields: [fine_id, amount, reason], limit: 5}
+
+tools:
+  - name: get_member_loans
+    description: List the member's active loans with due dates and renewals used.
+    effect: read
+    kind: db
+    params: {}
+    db: {op: find, collection: loans, filter: {status: active}, fields: [loan_id, title, due_date, renewals, reserved_by_other], limit: 10}
+
+  - name: renew_loan
+    description: Renew one of the member's active loans for 14 more days. The member must say yes first.
+    effect: write
+    kind: db
+    params:
+      loan_id: {type: string, pattern: "^L-\\d{4}$", description: "Loan ID, e.g. L-5001"}
+    db:
+      op: update
+      collection: loans
+      filter: {loan_id: "{params.loan_id}", status: active}
+      as: loan
+      set: {due_date: {days_after: loan.due_date, days: 14}}
+      inc: {renewals: 1}
+    rule:
+      deny_if:
+        - {rule_id: max_renewals, reason: "This loan has already been renewed twice (the limit)", when: {field: loan.renewals, op: ">=", value: 2}}
+        - {rule_id: reserved_by_other, reason: "Another member has reserved this book", when: {field: loan.reserved_by_other, op: "==", value: true}}
+      tier: confirm
+      rule_id: renew_confirm
+    idempotency: "renew:{params.loan_id}:{loan.renewals}"
+    result: {loan_id: "{loan.loan_id}", title: "{loan.title}", new_due_date: "{after.due_date}", renewals_used: "{after.renewals}"}
+
+  - name: waive_fine
+    description: Waive one of the member's unpaid fines. Small fines need the member's yes; larger ones need a librarian's approval.
+    effect: write
+    kind: db
+    params:
+      fine_id: {type: string, pattern: "^F-\\d{4}$", description: "Fine ID, e.g. F-7001"}
+      reason: {type: string, max_length: 120, description: "Why the fine should be waived"}
+    db:
+      op: update
+      collection: fines
+      filter: {fine_id: "{params.fine_id}"}
+      as: fine
+      set: {status: waived, waive_reason: "{params.reason}"}
+    rule:
+      deny_if:
+        - {rule_id: no_unpaid_fine, reason: "There is no unpaid fine with this ID", when: {field: fine.status, op: "!=", value: unpaid}}
+      tiers:
+        - {when: {field: fine.amount, op: ">", value: 100}, tier: approve, rule_id: fine_over_limit, reason: "Waivers above Rs 100 need a librarian"}
+      tier: confirm
+      rule_id: waive_confirm
+    idempotency: "waive:{params.fine_id}"
+    result: {fine_id: "{fine.fine_id}", amount: "{fine.amount}", status: "{after.status}"}

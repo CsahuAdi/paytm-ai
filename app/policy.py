@@ -90,7 +90,7 @@ def decide(tool: str, args: dict[str, Any], s: PolicyState, approved: bool = Fal
 
 def decide_reply(sentiment: str, confidence: str, escalation_reason: str, s: PolicyState) -> Decision | None:
     """Escalation triggers read at the end of a turn. Returns None when the turn needs no human."""
-    if escalation_reason in ESCALATION_REASONS:
+    if escalation_reason != "none":  # the reply schema limits values to the pack's reasons
         return Decision("escalate", escalation_reason, f"Agent flagged {escalation_reason}")
     if sentiment == "distressed":
         return Decision("escalate", "distress", "Customer seems distressed")

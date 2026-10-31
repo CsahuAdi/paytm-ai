@@ -17,7 +17,8 @@ from app.lang import layer
 from app.llm.base import LaneFailure, ToolResult
 from app.llm.router import Lane, router
 from app.policy import Decision, decide_reply
-from app.tools import TOOL_MODELS, TOOL_SPECS, Ctx, ReplyToCustomer, check_facts, execute, policy_state
+from app.registry import TOOL_MODELS, TOOL_SPECS, check_facts, execute
+from app.tools import Ctx, ReplyToCustomer, policy_state
 
 log = logging.getLogger("core")
 MAX_STEPS = 6

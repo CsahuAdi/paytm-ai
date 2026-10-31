@@ -1,0 +1,22 @@
+{
+  "customers": [
+    {"member_id": "M-1001", "name": "Asha Rao", "email": "asha.rao@example.com", "phone": "+919800000401", "language": "hi-IN", "tier": "standard"},
+    {"member_id": "M-1002", "name": "Dev Malik", "email": "dev.malik@example.com", "phone": "+919800000402", "language": "en-IN", "tier": "standard"},
+    {"member_id": "M-1003", "name": "Nisha Pillai", "email": "nisha.pillai@example.com", "phone": "+919800000403", "language": "en-IN", "tier": "standard"}
+  ],
+  "books": [
+    {"book_id": "B-301", "title": "The Monsoon Garden", "author": "R. Iyer", "available": false},
+    {"book_id": "B-302", "title": "Stars Over Thar", "author": "K. Shekhawat", "available": false},
+    {"book_id": "B-303", "title": "Notes from Malabar", "author": "A. Menon", "available": false},
+    {"book_id": "B-304", "title": "A Short History of Tea", "author": "P. Das", "available": true}
+  ],
+  "loans": [
+    {"loan_id": "L-5001", "member_id": "M-1001", "book_id": "B-301", "title": "The Monsoon Garden", "due_date": "2026-11-03", "renewals": 0, "reserved_by_other": false, "status": "active"},
+    {"loan_id": "L-5002", "member_id": "M-1001", "book_id": "B-302", "title": "Stars Over Thar", "due_date": "2026-11-01", "renewals": 2, "reserved_by_other": false, "status": "active"},
+    {"loan_id": "L-5003", "member_id": "M-1002", "book_id": "B-303", "title": "Notes from Malabar", "due_date": "2026-11-05", "renewals": 0, "reserved_by_other": true, "status": "active"}
+  ],
+  "fines": [
+    {"fine_id": "F-7001", "member_id": "M-1001", "amount": 60, "reason": "Returned 6 days late", "status": "unpaid"},
+    {"fine_id": "F-7002", "member_id": "M-1002", "amount": 150, "reason": "Returned 15 days late", "status": "unpaid"}
+  ]
+}
