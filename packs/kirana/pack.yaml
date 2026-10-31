@@ -8,6 +8,13 @@ default_language: en-IN
 labels: {subject: customer, primary: transactions, money: coupons, title: Merchant desk, reviewer: merchant}
 reviewers: [Sharma]
 channels: [web, paytm]
+welcome: Hi! I'm the Sharma Kirana assistant, here through the simulated Paytm chat (a hackathon demo with fake data). Tell me about a payment you're not happy with, or ask about your coupons.
+suggestions:
+  - "Hi, I paid Rs 240 yesterday at Sharma Kirana for rice and butter but the rice packet was torn. What can you do?"
+  - "Okay, the desk says coupons are available now. Can you show me my options again for that Rs 240 payment?"
+  - "I'll take the coupon, please."
+  - "I'd like the refund please, not the coupon."
+  - "Yes, go ahead."
 
 verification:
   param: customer_id

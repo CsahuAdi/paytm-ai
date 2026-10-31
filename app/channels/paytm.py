@@ -52,6 +52,16 @@ async def messages(phone: str) -> list[dict]:
             for m in rows]
 
 
+@router.get("/api/paytm/transactions")
+async def my_transactions(phone: str) -> list[dict]:
+    cust = await store.db.customers.find_one({"phone": phone})
+    if cust is None:
+        raise HTTPException(404, "unknown customer")
+    rows = [t async for t in store.db.transactions.find({"customer_id": cust["customer_id"]}).sort("date", -1).limit(8)]
+    return [{"txn_id": t["txn_id"], "amount": t["amount"], "status": t["status"], "items": t.get("items", ""), "resolution": t.get("resolution", "none"),
+             "date": jsonable(t["date"])[:10], "discount": t.get("discount", 0)} for t in rows]
+
+
 @router.get("/api/paytm/coupons")
 async def my_coupons(phone: str) -> list[dict]:
     cust = await store.db.customers.find_one({"phone": phone})

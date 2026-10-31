@@ -87,7 +87,7 @@ CASES = [
     {"name": "kirana_insight_approval_creates_coupon_and_message", "area": "kirana",
      "steps": [GRANT, {"insights": True}, {"approve": "issue_coupon", "by": "Sharma", "where": {"args.customer_id": "C-103"}}],
      "expect": [("count", "coupons", {"customer_id": "C-103", "source": "insight", "amount": 30}, 1), ("doc", "merchants", {}, "budget_remaining", 970),
-                ("count", "messages", {"author": "ai", "text": {"$regex": "KIRANA-"}}, 1), ("action", "issue_coupon", "executed", "insight_coupon")]},
+                ("count", "messages", {"author": "ai", "text": {"$regex": "KIRANA-"}, "seed": {"$ne": True}}, 1), ("action", "issue_coupon", "executed", "insight_coupon")]},
     {"name": "kirana_approval_cannot_lift_a_deny", "area": "kirana",
      "steps": [GRANT, {"insights": True}, {"set": ["merchants", {}, {"budget_remaining": 0}]},
                {"approve": "issue_coupon", "by": "Sharma", "where": {"args.customer_id": "C-103"}}],

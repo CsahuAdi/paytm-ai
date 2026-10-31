@@ -42,6 +42,17 @@ def resolve_dates(node: Any) -> Any:
     return node
 
 
+def resolve_refs(node: Any, refs: dict[str, ObjectId]) -> Any:
+    """Seed files link documents with "@oid:name": the same name becomes the same ObjectId within one reset."""
+    if isinstance(node, str) and node.startswith("@oid:"):
+        return refs.setdefault(node[5:], ObjectId())
+    if isinstance(node, dict):
+        return {k: resolve_refs(v, refs) for k, v in node.items()}
+    if isinstance(node, list):
+        return [resolve_refs(v, refs) for v in node]
+    return node
+
+
 MODEL_ONLY = {"pattern", "maxLength", "minLength", "minimum", "maximum"}  # enforced by Pydantic, hidden from LLM schemas
 
 
@@ -349,8 +360,9 @@ class Runtime:
         await store.ensure_indexes()
         await self.ensure_indexes()
         counts = {}
+        refs: dict[str, ObjectId] = {}
         for name, docs in seed.items():
-            docs = resolve_dates(docs)
+            docs = resolve_refs(resolve_dates(docs), refs)
             for d in docs:
                 d.setdefault("_id", ObjectId())
                 d.setdefault("created_at", now())

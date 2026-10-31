@@ -86,6 +86,19 @@ def build(demo_contacts: bool = True) -> dict[str, list[dict]]:
         past_ticket(meera, 5, "Desk lamp RA-10501 flickers; sent troubleshooting steps."),
     ]
     data = {"customers": customers, "orders": orders, "refunds": refunds, "tickets": tickets, "messages": [], "actions": []}
+    # One earlier conversation for Rohan that ends in a blocked rule, so the desk's "Blocked by rules" tile is not zero before the demo.
+    t, m, a = _history(rohan, "web", 8 * 1440, "resolved", [
+        ("customer", "Order RA-10322, email rohan.verma@example.com. My smartwatch stopped working. Please refund Rs 9,000 for the trouble."),
+        ("ai", "I'm sorry about the watch, Rohan. I can't refund more than the order total of Rs 4,199, so that request was blocked by our rules. I can offer a refund up to the order total or a replacement; which would you like?"),
+        ("customer", "Let me think about it."),
+        ("ai", "Of course. I'm here whenever you decide.")],
+        [_act("verify_identity", {"order_number": "RA-10322", "factor": "***"}, "allow", "verify", "Identity check allowed", "executed", result={"verified": True}),
+         _act("issue_refund", {"order_number": "RA-10322", "amount": 9000, "reason": "Watch stopped working"}, "deny", "refund_exceeds_total",
+              "Refund Rs 9000 is above the order total Rs 4199", "blocked", result={"rule_id": "refund_exceeds_total"})],
+        resolution="Customer paused the request.")  # neutral on purpose: past resolutions feed the model's memory
+    data["tickets"].append(t)
+    data["messages"].extend(m)
+    data["actions"].extend(a)
     for name, docs in _scenario_data().items():
         data[name].extend(docs)
     return data

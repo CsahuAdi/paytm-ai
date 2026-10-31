@@ -25,6 +25,14 @@
   form button { padding:0 18px; border:0; border-radius:10px; background:var(--me); color:#fff; cursor:pointer; }
   form button:disabled { opacity:.5; }
   .note { color:var(--warn); font-size:12px; }
+  .msg.welcome { align-self:center; max-width:92%; background:#f9fafb; color:var(--muted); font-size:13.5px; text-align:center; }
+  header h1 small { display:block; color:var(--muted); font-weight:400; font-size:12.5px; }
+  .hintcard { align-self:center; max-width:92%; border:1px dashed var(--line); border-radius:12px; padding:8px 14px; color:var(--muted); font-size:12.5px; line-height:1.6; }
+  #chips { display:flex; gap:6px; flex-wrap:wrap; padding:8px 0; border-top:1px solid var(--line); }
+  #chips button { border:1px solid var(--line); background:var(--card); border-radius:14px; padding:4px 11px; font-size:12.5px; color:var(--ink); cursor:pointer; max-width:100%; text-align:left; }
+  #chips button:hover { background:var(--bg); }
+  #chips small { width:100%; color:var(--muted); font-size:11.5px; }
+  [hidden] { display:none !important; }
 </style>
 </head>
 <body>
@@ -40,6 +48,7 @@
     <small id="sid"></small>
   </header>
   <div id="log"></div>
+  <div id="chips" hidden></div>
   <form id="f"><input id="t" autocomplete="off" placeholder="Type your message…" autofocus><button id="send">Send</button></form>
 </div>
 <script>
@@ -74,6 +83,7 @@ $("f").onsubmit = async (e) => {
   const text = $("t").value.trim();
   if (!text) return;
   $("t").value = ""; $("send").disabled = true;
+  document.querySelectorAll(".hintcard").forEach((el) => el.remove());
   add("me", text);
   const typing = add("typing", "…");
   try {
@@ -95,11 +105,20 @@ $("f").onsubmit = async (e) => {
 // Pack-aware title: customer service keeps "ResolveAI support".
 fetch("/api/config").then((r) => r.json()).then((cfg) => {
   const name = cfg.pack ? cfg.product : `${cfg.product} support`;
-  $("title").textContent = name; document.title = `${name} · Chat`;
+  $("title").innerHTML = `${name.replace(/[&<>]/g, "")}<small>AI assistant · demo with invented data</small>`; document.title = `${name} · Chat`;
+  if (cfg.welcome) { const w = document.createElement("div"); w.className = "msg welcome"; w.textContent = cfg.welcome; $("log").prepend(w); }
+  if ((cfg.hints || []).length) { const h = document.createElement("div"); h.className = "hintcard"; h.innerHTML = cfg.hints.map((x) => `<div>${x.replace(/[&<>]/g, "")}</div>`).join(""); $("log").appendChild(h); }
+  const sug = cfg.suggestions || [];
+  if (sug.length) {
+    $("chips").hidden = false;
+    $("chips").innerHTML = "<small>Tap an example to fill the box, then press Send:</small>" +
+      sug.map((s, i) => `<button type="button" data-i="${i}">${(s.length > 70 ? s.slice(0, 68) + "…" : s).replace(/[&<>]/g, "")}</button>`).join("");
+    $("chips").querySelectorAll("button").forEach((b) => b.onclick = () => { $("t").value = sug[Number(b.dataset.i)]; $("t").focus(); });
+  }
 }).catch(() => {});
 
 // Async messages for this session: approval outcomes and replies from a human teammate.
-const es = new EventSource("/api/events?session=" + encodeURIComponent(session));
+const es = new URLSearchParams(location.search).has("nosse") ? { close() {} } : new EventSource("/api/events?session=" + encodeURIComponent(session));  // nosse: static screenshots only
 es.onmessage = (ev) => {
   const e = JSON.parse(ev.data);
   if (e.kind !== "message" || e.author === "customer") return;

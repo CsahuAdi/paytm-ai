@@ -21,7 +21,8 @@
    "phone": "+919800000501",
    "language": "en-IN",
    "tier": "standard",
-   "marketing_opt_in": true
+   "marketing_opt_in": true,
+   "_id": "@oid:c101"
   },
   {
    "customer_id": "C-102",
@@ -31,7 +32,8 @@
    "phone": "+919800000502",
    "language": "hi-IN",
    "tier": "standard",
-   "marketing_opt_in": true
+   "marketing_opt_in": true,
+   "_id": "@oid:c102"
   },
   {
    "customer_id": "C-103",
@@ -40,7 +42,8 @@
    "phone": "+919800000503",
    "language": "en-IN",
    "tier": "standard",
-   "marketing_opt_in": true
+   "marketing_opt_in": true,
+   "_id": "@oid:c103"
   },
   {
    "customer_id": "C-104",
@@ -49,7 +52,8 @@
    "phone": "+919800000504",
    "language": "en-IN",
    "tier": "standard",
-   "marketing_opt_in": false
+   "marketing_opt_in": false,
+   "_id": "@oid:c104"
   },
   {
    "customer_id": "C-105",
@@ -58,7 +62,8 @@
    "phone": "+919800000505",
    "language": "en-IN",
    "tier": "standard",
-   "marketing_opt_in": true
+   "marketing_opt_in": true,
+   "_id": "@oid:c105"
   }
  ],
  "transactions": [
@@ -231,6 +236,26 @@
    "items": "Paneer 200 g (charged twice)",
    "date": "@days_ago:2",
    "resolution": "none"
+  },
+  {
+   "txn_id": "T-9015",
+   "customer_id": "C-102",
+   "merchant_id": "M-SHARMA",
+   "amount": 95,
+   "status": "refunded",
+   "items": "Atta 1 kg (packet torn)",
+   "date": "@days_ago:5.2",
+   "resolution": "refund"
+  },
+  {
+   "txn_id": "T-9004",
+   "customer_id": "C-101",
+   "merchant_id": "M-SHARMA",
+   "amount": 60,
+   "status": "refunded",
+   "items": "Curd 500 g (missing from the bag)",
+   "date": "@days_ago:10.2",
+   "resolution": "refund"
   }
  ],
  "coupons": [
@@ -286,6 +311,347 @@
    "max_per_day": null,
    "granted_by": "seed",
    "granted_at": "@days_ago:0"
+  }
+ ],
+ "tickets": [
+  {
+   "_id": "@oid:ks1",
+   "customer_id": "@oid:c102",
+   "identity_id": null,
+   "status": "resolved",
+   "mode": "ai",
+   "language": "hi-IN",
+   "script": "native",
+   "channels": [
+    "paytm"
+   ],
+   "order_ids": [],
+   "summary": "",
+   "summary_upto": null,
+   "summary_version": 0,
+   "resolution": "Refunded Rs 95 for T-9015 (torn packet).",
+   "human_note": null,
+   "escalation": null,
+   "model_calls": 3,
+   "created_at": "@days_ago:5.00000",
+   "updated_at": "@days_ago:4.99580",
+   "seed": true
+  },
+  {
+   "_id": "@oid:ks2",
+   "customer_id": "@oid:c101",
+   "identity_id": null,
+   "status": "resolved",
+   "mode": "ai",
+   "language": "en-IN",
+   "script": "native",
+   "channels": [
+    "paytm"
+   ],
+   "order_ids": [],
+   "summary": "",
+   "summary_upto": null,
+   "summary_version": 0,
+   "resolution": "Refunded Rs 60 for T-9004 (missing item).",
+   "human_note": null,
+   "escalation": null,
+   "model_calls": 3,
+   "created_at": "@days_ago:10.00000",
+   "updated_at": "@days_ago:9.99580",
+   "seed": true
+  },
+  {
+   "_id": "@oid:ks3",
+   "customer_id": "@oid:c104",
+   "identity_id": null,
+   "status": "resolved",
+   "mode": "ai",
+   "language": "en-IN",
+   "script": "native",
+   "channels": [
+    "paytm"
+   ],
+   "order_ids": [],
+   "summary": "",
+   "summary_upto": null,
+   "summary_version": 0,
+   "resolution": "Answered a question about offers.",
+   "human_note": null,
+   "escalation": null,
+   "model_calls": 1,
+   "created_at": "@days_ago:8.00000",
+   "updated_at": "@days_ago:7.99720",
+   "seed": true
+  },
+  {
+   "_id": "@oid:ks4",
+   "customer_id": "@oid:c105",
+   "identity_id": null,
+   "status": "resolved",
+   "mode": "ai",
+   "language": "en-IN",
+   "script": "native",
+   "channels": [
+    "paytm"
+   ],
+   "order_ids": [],
+   "summary": "",
+   "summary_upto": null,
+   "summary_version": 0,
+   "resolution": "Win-back offer sent (Rs 30 coupon).",
+   "human_note": null,
+   "escalation": null,
+   "model_calls": 0,
+   "created_at": "@days_ago:5.00000",
+   "updated_at": "@days_ago:4.99790",
+   "seed": true
+  }
+ ],
+ "messages": [
+  {
+   "ticket_id": "@oid:ks1",
+   "author": "customer",
+   "author_name": null,
+   "channel": "paytm",
+   "modality": "text",
+   "language": "hi-IN",
+   "text": "आटे का पैकेट फटा हुआ मिला। 95 रुपये का पेमेंट था।",
+   "text_en": "The atta packet arrived torn. It was a 95 rupee payment.",
+   "external_id": null,
+   "sender": "+919800000502",
+   "meta": {
+    "seed": true
+   },
+   "seed": true,
+   "created_at": "@days_ago:5.00000"
+  },
+  {
+   "ticket_id": "@oid:ks1",
+   "author": "ai",
+   "author_name": null,
+   "channel": "paytm",
+   "modality": "text",
+   "language": "hi-IN",
+   "text": "माफ़ कीजिए! आपके 95 रुपये का रिफंड 3-5 कार्य दिवसों में मूल भुगतान माध्यम में आ जाएगा। क्या मैं रिफंड कर दूँ?",
+   "text_en": "I'm sorry! Your Rs 95 will go back to your original payment method in 3-5 working days. Shall I go ahead with the refund?",
+   "external_id": null,
+   "sender": "+919800000502",
+   "meta": {
+    "seed": true
+   },
+   "seed": true,
+   "created_at": "@days_ago:4.99860"
+  },
+  {
+   "ticket_id": "@oid:ks1",
+   "author": "customer",
+   "author_name": null,
+   "channel": "paytm",
+   "modality": "text",
+   "language": "hi-IN",
+   "text": "हाँ, कर दीजिए।",
+   "text_en": "Yes, please do.",
+   "external_id": null,
+   "sender": "+919800000502",
+   "meta": {
+    "seed": true
+   },
+   "seed": true,
+   "created_at": "@days_ago:4.99720"
+  },
+  {
+   "ticket_id": "@oid:ks1",
+   "author": "ai",
+   "author_name": null,
+   "channel": "paytm",
+   "modality": "text",
+   "language": "hi-IN",
+   "text": "हो गया। 95 रुपये का रिफंड शुरू कर दिया गया है।",
+   "text_en": "Done. The Rs 95 refund has been started.",
+   "external_id": null,
+   "sender": "+919800000502",
+   "meta": {
+    "seed": true
+   },
+   "seed": true,
+   "created_at": "@days_ago:4.99580"
+  },
+  {
+   "ticket_id": "@oid:ks2",
+   "author": "customer",
+   "author_name": null,
+   "channel": "paytm",
+   "modality": "text",
+   "language": "en-IN",
+   "text": "My curd packet was missing from the bag today. It was Rs 60.",
+   "text_en": "My curd packet was missing from the bag today. It was Rs 60.",
+   "external_id": null,
+   "sender": "+919800000501",
+   "meta": {
+    "seed": true
+   },
+   "seed": true,
+   "created_at": "@days_ago:10.00000"
+  },
+  {
+   "ticket_id": "@oid:ks2",
+   "author": "ai",
+   "author_name": null,
+   "channel": "paytm",
+   "modality": "text",
+   "language": "en-IN",
+   "text": "Sorry about that, Rohit. I can refund the Rs 60 to your original payment method in 3-5 working days. Shall I go ahead?",
+   "text_en": "Sorry about that, Rohit. I can refund the Rs 60 to your original payment method in 3-5 working days. Shall I go ahead?",
+   "external_id": null,
+   "sender": "+919800000501",
+   "meta": {
+    "seed": true
+   },
+   "seed": true,
+   "created_at": "@days_ago:9.99860"
+  },
+  {
+   "ticket_id": "@oid:ks2",
+   "author": "customer",
+   "author_name": null,
+   "channel": "paytm",
+   "modality": "text",
+   "language": "en-IN",
+   "text": "Yes please.",
+   "text_en": "Yes please.",
+   "external_id": null,
+   "sender": "+919800000501",
+   "meta": {
+    "seed": true
+   },
+   "seed": true,
+   "created_at": "@days_ago:9.99720"
+  },
+  {
+   "ticket_id": "@oid:ks2",
+   "author": "ai",
+   "author_name": null,
+   "channel": "paytm",
+   "modality": "text",
+   "language": "en-IN",
+   "text": "Done. Your Rs 60 refund has been started.",
+   "text_en": "Done. Your Rs 60 refund has been started.",
+   "external_id": null,
+   "sender": "+919800000501",
+   "meta": {
+    "seed": true
+   },
+   "seed": true,
+   "created_at": "@days_ago:9.99580"
+  },
+  {
+   "ticket_id": "@oid:ks3",
+   "author": "customer",
+   "author_name": null,
+   "channel": "paytm",
+   "modality": "text",
+   "language": "en-IN",
+   "text": "Can I stop getting offers from the store?",
+   "text_en": "Can I stop getting offers from the store?",
+   "external_id": null,
+   "sender": "+919800000504",
+   "meta": {
+    "seed": true
+   },
+   "seed": true,
+   "created_at": "@days_ago:8.00000"
+  },
+  {
+   "ticket_id": "@oid:ks3",
+   "author": "ai",
+   "author_name": null,
+   "channel": "paytm",
+   "modality": "text",
+   "language": "en-IN",
+   "text": "Of course. You're not opted in to offers, so you won't be sent any. You can change that whenever you like.",
+   "text_en": "Of course. You're not opted in to offers, so you won't be sent any. You can change that whenever you like.",
+   "external_id": null,
+   "sender": "+919800000504",
+   "meta": {
+    "seed": true
+   },
+   "seed": true,
+   "created_at": "@days_ago:7.99860"
+  },
+  {
+   "ticket_id": "@oid:ks4",
+   "author": "ai",
+   "author_name": null,
+   "channel": "paytm",
+   "modality": "text",
+   "language": "en-IN",
+   "text": "Hi Arjun, we miss you at Sharma Kirana! Here is a Rs 30 coupon, KIRANA-7Q2P, for your next Paytm payment at the store.",
+   "text_en": "Hi Arjun, we miss you at Sharma Kirana! Here is a Rs 30 coupon, KIRANA-7Q2P, for your next Paytm payment at the store.",
+   "external_id": null,
+   "sender": "+919800000505",
+   "meta": {
+    "seed": true
+   },
+   "seed": true,
+   "created_at": "@days_ago:5.00000"
+  }
+ ],
+ "actions": [
+  {
+   "ticket_id": "@oid:ks1",
+   "customer_id": "@oid:c102",
+   "channel": "paytm",
+   "tool": "refund_to_source",
+   "args": {
+    "transaction_id": "T-9015"
+   },
+   "tier": "confirm",
+   "decision": {
+    "result": "confirm",
+    "rule_id": "refund_confirm",
+    "reason": "Customer must confirm the refund"
+   },
+   "status": "executed",
+   "result": {
+    "transaction_id": "T-9015",
+    "amount": 95,
+    "status": "refunded"
+   },
+   "idempotency_key": null,
+   "decided_by": "customer",
+   "decided_at": "@days_ago:4.99720",
+   "decision_note": null,
+   "seed": true,
+   "created_at": "@days_ago:4.99650",
+   "updated_at": "@days_ago:4.99650"
+  },
+  {
+   "ticket_id": "@oid:ks2",
+   "customer_id": "@oid:c101",
+   "channel": "paytm",
+   "tool": "refund_to_source",
+   "args": {
+    "transaction_id": "T-9004"
+   },
+   "tier": "confirm",
+   "decision": {
+    "result": "confirm",
+    "rule_id": "refund_confirm",
+    "reason": "Customer must confirm the refund"
+   },
+   "status": "executed",
+   "result": {
+    "transaction_id": "T-9004",
+    "amount": 60,
+    "status": "refunded"
+   },
+   "idempotency_key": null,
+   "decided_by": "customer",
+   "decided_at": "@days_ago:9.99720",
+   "decision_note": null,
+   "seed": true,
+   "created_at": "@days_ago:9.99650",
+   "updated_at": "@days_ago:9.99650"
   }
  ]
 }

@@ -5,50 +5,78 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Simulated Paytm channel · Sharma Kirana</title>
 <style>
-  :root { --bg:#f3f4f6; --card:#fff; --ink:#1f2937; --muted:#6b7280; --me:#374151; --line:#e5e7eb; --warn:#92400e; }
+  :root { --bg:#f3f4f6; --card:#fff; --ink:#1f2937; --muted:#6b7280; --me:#374151; --line:#e5e7eb; --warn:#92400e; --ok:#166534; --okbg:#dcfce7; --bad:#991b1b; --badbg:#fee2e2; --amber:#92400e; --amberbg:#fef3c7; --greybg:#eef0f3; }
   * { box-sizing: border-box; }
-  body { margin:0; font:15px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif; background:var(--bg); color:var(--ink); }
-  .wrap { max-width:640px; margin:0 auto; height:100vh; display:flex; flex-direction:column; padding:0 16px 12px; }
-  .banner { background:#fef3c7; color:var(--warn); font-size:12.5px; text-align:center; padding:6px 10px; margin:0 -16px; }
-  header { display:flex; align-items:center; gap:10px; padding:10px 0; border-bottom:1px solid var(--line); flex-wrap:wrap; }
-  header h1 { font-size:16px; margin:0; flex:1; }
-  header small { color:var(--muted); display:block; font-weight:400; }
+  [hidden] { display:none !important; }
+  body { margin:0; font:15px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif; background:var(--bg); color:var(--ink); height:100vh; display:flex; flex-direction:column; }
+  .banner { background:#fef3c7; color:var(--warn); font-size:12.5px; text-align:center; padding:6px 10px; }
+  header { display:flex; align-items:center; gap:12px; padding:10px 18px; background:var(--card); border-bottom:1px solid var(--line); flex-wrap:wrap; }
+  header h1 { font-size:17px; margin:0; flex:1; }
+  header h1 small { color:var(--muted); display:block; font-weight:400; font-size:12.5px; }
   select, input, button { font:inherit; }
   select { padding:4px 8px; border:1px solid var(--line); border-radius:8px; background:var(--card); }
+  .layout { flex:1; min-height:0; display:grid; grid-template-columns:320px minmax(0,1fr); gap:14px; padding:14px 18px; max-width:1100px; width:100%; margin:0 auto; }
+  aside { display:flex; flex-direction:column; gap:12px; min-height:0; overflow-y:auto; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:12px 14px; }
+  .card h2 { margin:0 0 8px; font-size:12px; text-transform:uppercase; letter-spacing:.06em; color:var(--muted); }
+  .txn { display:flex; justify-content:space-between; gap:8px; padding:7px 0; border-bottom:1px solid var(--line); font-size:13px; }
+  .txn:last-child { border-bottom:0; }
+  .txn small, .cp small { display:block; color:var(--muted); font-size:11.5px; }
+  .txn .amt { text-align:right; white-space:nowrap; font-weight:600; }
+  .chip { display:inline-block; font-size:11px; padding:1px 7px; border-radius:10px; background:var(--greybg); margin-left:5px; font-weight:500; }
+  .chip.success, .chip.issued { background:var(--okbg); color:var(--ok); } .chip.failed { background:var(--badbg); color:var(--bad); }
+  .chip.duplicate { background:var(--amberbg); color:var(--amber); } .chip.refunded, .chip.redeemed { background:var(--greybg); color:var(--muted); }
+  .cp { display:flex; justify-content:space-between; gap:8px; padding:6px 0; font-size:13px; border-bottom:1px solid var(--line); }
+  .cp:last-child { border-bottom:0; } .cp code { font-family:ui-monospace, Consolas, monospace; font-weight:600; }
+  .none { color:var(--muted); font-size:13px; }
+  .payrow { display:flex; gap:8px; align-items:center; flex-wrap:wrap; font-size:13px; }
+  .payrow button { padding:5px 14px; border:0; border-radius:8px; background:var(--me); color:#fff; cursor:pointer; }
+  .chat { display:flex; flex-direction:column; min-height:0; background:var(--card); border:1px solid var(--line); border-radius:12px; padding:0 14px 12px; }
   #log { flex:1; overflow-y:auto; padding:14px 0; display:flex; flex-direction:column; gap:10px; }
-  .msg { max-width:82%; padding:9px 13px; border-radius:14px; background:var(--card); border:1px solid var(--line); white-space:pre-wrap; }
+  .msg { max-width:82%; padding:9px 13px; border-radius:14px; background:var(--bg); border:1px solid var(--line); white-space:pre-wrap; }
+  .msg.welcome { align-self:center; max-width:92%; background:#f9fafb; color:var(--muted); font-size:13.5px; text-align:center; }
   .msg.me { align-self:flex-end; background:var(--me); color:#fff; border-color:var(--me); }
-  .msg.human { border-color:#16a34a; }
+  .msg.human { border-color:#16a34a; background:#f0fdf4; }
   .meta { font-size:11.5px; color:var(--muted); margin-top:4px; } .msg.me .meta { color:#d1d5db; }
   .typing { color:var(--muted); font-style:italic; align-self:flex-start; }
-  form { display:flex; gap:8px; padding-top:10px; border-top:1px solid var(--line); }
+  .note { color:var(--warn); font-size:12.5px; align-self:center; }
+  #chips { display:flex; gap:6px; flex-wrap:wrap; padding:8px 0; border-top:1px solid var(--line); }
+  #chips button { border:1px solid var(--line); background:var(--card); border-radius:14px; padding:4px 11px; font-size:12.5px; color:var(--ink); cursor:pointer; max-width:100%; text-align:left; }
+  #chips button:hover { background:var(--bg); }
+  #chips small { width:100%; color:var(--muted); font-size:11.5px; }
+  form { display:flex; gap:8px; }
   form input { flex:1; padding:11px 13px; border:1px solid var(--line); border-radius:10px; }
   form button { padding:0 18px; border:0; border-radius:10px; background:var(--me); color:#fff; cursor:pointer; }
   form button:disabled { opacity:.5; }
-  .note { color:var(--warn); font-size:12px; }
-  details#pay { border-top:1px solid var(--line); padding:8px 0 0; font-size:13px; color:var(--muted); }
-  .payrow { display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin:8px 0; color:var(--ink); }
-  .payrow button { padding:5px 14px; border:0; border-radius:8px; background:var(--me); color:#fff; cursor:pointer; }
+  @media (max-width: 820px) { body { height:auto; } .layout { grid-template-columns:1fr; } aside { max-height:none; } .chat { height:78vh; } }
 </style>
 </head>
 <body>
-<div class="wrap">
   <div class="banner">Simulated Paytm channel, hackathon demo with fake data, not affiliated with Paytm</div>
   <header>
     <h1 id="title">Sharma Kirana <small>chat · via Paytm (simulated)</small></h1>
     <label>You are <select id="who"></select></label>
   </header>
-  <div id="log"></div>
-  <details id="pay"><summary>Pay at Sharma Kirana (simulated)</summary>
-    <div class="payrow"><label>Coupon <select id="coupon"><option value="">no coupon</option></select></label>
-      <label>Amount Rs <input id="amount" type="number" min="1" value="200" style="width:84px"></label>
-      <button type="button" id="paybtn">Pay</button></div></details>
-  <form id="f"><input id="t" autocomplete="off" placeholder="Type your message…" autofocus><button id="send">Send</button></form>
-</div>
+  <div class="layout">
+    <aside>
+      <div class="card"><h2>Recent payments at Sharma Kirana</h2><div id="pay-list"><div class="none">Loading…</div></div></div>
+      <div class="card"><h2>Your coupons</h2><div id="cp-list"><div class="none">Loading…</div></div></div>
+      <div class="card"><h2>Pay at the store (simulated)</h2>
+        <div class="payrow"><label>Coupon <select id="coupon"><option value="">no coupon</option></select></label>
+          <label>Rs <input id="amount" type="number" min="1" value="200" style="width:84px;padding:4px 8px;border:1px solid var(--line);border-radius:8px"></label>
+          <button type="button" id="paybtn">Pay</button></div></div>
+    </aside>
+    <section class="chat">
+      <div id="log"></div>
+      <div id="chips" hidden></div>
+      <form id="f"><input id="t" autocomplete="off" placeholder="Type your message…" autofocus><button id="send">Send</button></form>
+    </section>
+  </div>
 <script>
 const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" }[c]));
 const store = { get(k) { try { return localStorage.getItem(k); } catch { return null; } }, set(k, v) { try { localStorage.setItem(k, v); } catch {} } };
-let phone = null, es = null;
+let phone = null, es = null, CFG = {};
 const seen = new Set();
 
 function add(cls, text, meta) {
@@ -63,13 +91,22 @@ function show(id, author, text, name) {
   add(author === "customer" ? "me" : author === "human" ? "human" : "", text, author === "human" ? `${name || "Teammate"} (human)` : "");
 }
 
+async function loadPayments() {
+  const rows = await (await fetch("/api/paytm/transactions?phone=" + encodeURIComponent(phone))).json();
+  $("pay-list").innerHTML = rows.length ? rows.map((t) => `<div class="txn"><div><b>${esc(t.items || "Payment")}</b><small>${esc(t.txn_id)} · ${esc(t.date)}</small></div>
+    <div class="amt">Rs ${esc(t.amount)}<br><span class="chip ${esc(t.status)}">${esc(t.status)}</span>${t.resolution && t.resolution !== "none" ? `<span class="chip">${esc(t.resolution)}</span>` : ""}</div></div>`).join("")
+    : '<div class="none">No payments yet.</div>';
+}
 async function loadCoupons() {
   const rows = await (await fetch("/api/paytm/coupons?phone=" + encodeURIComponent(phone))).json();
+  $("cp-list").innerHTML = rows.length ? rows.map((c) => `<div class="cp"><div><code>${esc(c.code)}</code><small>${c.status === "issued" ? "until " + esc(c.expires) : esc(c.status)} · ${esc(c.source)}</small></div>
+    <div><b>Rs ${esc(c.amount)}</b><span class="chip ${esc(c.status)}">${esc(c.status)}</span></div></div>`).join("") : '<div class="none">No coupons yet.</div>';
   const usable = rows.filter((c) => c.status === "issued");
-  $("coupon").innerHTML = '<option value="">no coupon</option>' + usable.map((c) => `<option value="${c.code}">${c.code} · Rs ${c.amount} · until ${c.expires}</option>`).join("");
+  $("coupon").innerHTML = '<option value="">no coupon</option>' + usable.map((c) => `<option value="${esc(c.code)}">${esc(c.code)} · Rs ${esc(c.amount)}</option>`).join("");
   if (usable.length) $("coupon").value = usable[0].code;
-  $("pay").querySelector("summary").textContent = `Pay at Sharma Kirana (simulated)${usable.length ? ` · ${usable.length} coupon${usable.length > 1 ? "s" : ""} available` : ""}`;
 }
+const refreshSide = () => Promise.all([loadPayments(), loadCoupons()]).catch(() => {});
+
 $("paybtn").onclick = async () => {
   $("paybtn").disabled = true;
   try {
@@ -79,12 +116,13 @@ $("paybtn").onclick = async () => {
     if (!r.ok) add("note", d.detail || "Payment failed");
     else add("note", `Simulated payment of Rs ${d.paid} made${d.coupon ? ` (coupon ${d.coupon} took Rs ${d.discount} off)` : ""}. Transaction ${d.txn_id}.`);
   } catch (err) { add("note", "Could not reach the server: " + err.message); }
-  finally { $("paybtn").disabled = false; loadCoupons(); }
+  finally { $("paybtn").disabled = false; refreshSide(); }
 };
 
 async function openThread() {
-  loadCoupons();
   $("log").innerHTML = ""; seen.clear();
+  if (CFG.welcome) add("welcome", CFG.welcome);
+  refreshSide();
   const rows = await (await fetch("/api/paytm/messages?phone=" + encodeURIComponent(phone))).json();
   rows.forEach((m) => show(m.id, m.author, m.text, m.author_name));
   if (es) es.close();
@@ -92,13 +130,21 @@ async function openThread() {
   es = new EventSource("/api/events?session=" + encodeURIComponent(phone));  // live: replies, approval results and merchant offers
   es.onmessage = (ev) => {
     const e = JSON.parse(ev.data);
-    if (e.kind === "message" && e.author !== "customer") { setTimeout(() => show(e.message_id, e.author, e.text, e.author_name), 300); setTimeout(loadCoupons, 600); }
+    if (e.kind === "message" && e.author !== "customer") { setTimeout(() => show(e.message_id, e.author, e.text, e.author_name), 300); setTimeout(refreshSide, 700); }
   };
 }
 
 (async () => {
+  CFG = await (await fetch("/api/config")).json().catch(() => ({}));
+  const sug = CFG.suggestions || [];
+  if (sug.length) {
+    $("chips").hidden = false;
+    $("chips").innerHTML = '<small>Tap an example to fill the box, then press Send (about 30 seconds between messages keeps the free model happy):</small>' +
+      sug.map((s, i) => `<button type="button" data-i="${i}">${esc(s.length > 70 ? s.slice(0, 68) + "…" : s)}</button>`).join("");
+    $("chips").querySelectorAll("button").forEach((b) => b.onclick = () => { $("t").value = sug[Number(b.dataset.i)]; $("t").focus(); });
+  }
   const people = await (await fetch("/api/paytm/customers")).json();
-  $("who").innerHTML = people.map((p) => `<option value="${p.phone}">${p.name} (${p.customer_id})</option>`).join("");
+  $("who").innerHTML = people.map((p) => `<option value="${esc(p.phone)}">${esc(p.name)} (${esc(p.customer_id)})</option>`).join("");
   const saved = store.get("ra_paytm_phone");
   if (people.some((p) => p.phone === saved)) $("who").value = saved;
   phone = $("who").value;
@@ -121,7 +167,7 @@ $("f").onsubmit = async (e) => {
     if (d.reply) show(d.message_id, "ai", d.reply, "");
     else if (d.meta && d.meta.mode === "human") add("typing", "The merchant is handling this conversation…");
   } catch (err) { typing.remove(); add("note", "Could not reach the server: " + err.message); }
-  finally { $("send").disabled = false; $("t").focus(); }
+  finally { $("send").disabled = false; $("t").focus(); refreshSide(); }
 };
 </script>
 </body>

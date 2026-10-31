@@ -8,7 +8,8 @@
    "phone": "+919800000401",
    "language": "hi-IN",
    "tier": "standard",
-   "address": "12, गुलमोहर लेन, पुणे"
+   "address": "12, गुलमोहर लेन, पुणे",
+   "_id": "@oid:m1001"
   },
   {
    "member_id": "M-1002",
@@ -16,7 +17,8 @@
    "email": "dev.malik@example.com",
    "phone": "+919800000402",
    "language": "en-IN",
-   "tier": "standard"
+   "tier": "standard",
+   "_id": "@oid:m1002"
   },
   {
    "member_id": "M-1003",
@@ -24,7 +26,8 @@
    "email": "nisha.pillai@example.com",
    "phone": "+919800000403",
    "language": "en-IN",
-   "tier": "standard"
+   "tier": "standard",
+   "_id": "@oid:m1003"
   },
   {
    "member_id": "M-1004",
@@ -32,7 +35,8 @@
    "email": "kabir.sethi@example.com",
    "phone": "+919800000404",
    "language": "en-IN",
-   "tier": "standard"
+   "tier": "standard",
+   "_id": "@oid:m1004"
   },
   {
    "member_id": "M-1005",
@@ -40,7 +44,8 @@
    "email": "fatima.sheikh@example.com",
    "phone": "+919800000405",
    "language": "en-IN",
-   "tier": "standard"
+   "tier": "standard",
+   "_id": "@oid:m1005"
   },
   {
    "member_id": "M-1006",
@@ -48,7 +53,8 @@
    "email": "joseph.dsouza@example.com",
    "phone": "+919800000406",
    "language": "en-IN",
-   "tier": "standard"
+   "tier": "standard",
+   "_id": "@oid:m1006"
   },
   {
    "member_id": "M-1007",
@@ -56,7 +62,8 @@
    "email": "meenakshi.s@example.com",
    "phone": "+919800000407",
    "language": "en-IN",
-   "tier": "standard"
+   "tier": "standard",
+   "_id": "@oid:m1007"
   },
   {
    "member_id": "M-1008",
@@ -64,7 +71,8 @@
    "email": "harpreet.gill@example.com",
    "phone": "+919800000408",
    "language": "en-IN",
-   "tier": "standard"
+   "tier": "standard",
+   "_id": "@oid:m1008"
   }
  ],
  "books": [
@@ -419,6 +427,443 @@
    "max_per_day": null,
    "granted_by": "seed",
    "granted_at": "2026-10-31T09:00:00"
+  }
+ ],
+ "tickets": [
+  {
+   "_id": "@oid:ld1",
+   "customer_id": "@oid:m1002",
+   "identity_id": null,
+   "status": "resolved",
+   "mode": "ai",
+   "language": "en-IN",
+   "script": "native",
+   "channels": [
+    "web"
+   ],
+   "order_ids": [],
+   "summary": "",
+   "summary_upto": null,
+   "summary_version": 0,
+   "resolution": "Renewal refused: another member reserved the book.",
+   "human_note": null,
+   "escalation": null,
+   "model_calls": 3,
+   "created_at": "@days_ago:3.00000",
+   "updated_at": "@days_ago:2.99650",
+   "seed": true
+  },
+  {
+   "_id": "@oid:ln1",
+   "customer_id": "@oid:m1003",
+   "identity_id": null,
+   "status": "resolved",
+   "mode": "ai",
+   "language": "en-IN",
+   "script": "native",
+   "channels": [
+    "web"
+   ],
+   "order_ids": [],
+   "summary": "",
+   "summary_upto": null,
+   "summary_version": 0,
+   "resolution": "Answered a catalogue question.",
+   "human_note": null,
+   "escalation": null,
+   "model_calls": 1,
+   "created_at": "@days_ago:2.00000",
+   "updated_at": "@days_ago:1.99720",
+   "seed": true
+  },
+  {
+   "_id": "@oid:lk1",
+   "customer_id": "@oid:m1004",
+   "identity_id": null,
+   "status": "resolved",
+   "mode": "ai",
+   "language": "en-IN",
+   "script": "native",
+   "channels": [
+    "web"
+   ],
+   "order_ids": [],
+   "summary": "",
+   "summary_upto": null,
+   "summary_version": 0,
+   "resolution": "Lost-book charge cleared after a shelf check.",
+   "human_note": null,
+   "escalation": {
+    "reason": "Member disputes a lost-book charge",
+    "rule_id": "lost_book_dispute",
+    "note": "",
+    "handoff_summary": {
+     "issue": "Member says they returned The Clockmaker of Kochi but the system lists it as lost.",
+     "tried": "Verified the member and passed the case to a librarian.",
+     "mood": "Frustrated",
+     "next_step": "Check the shelf and return records, then clear or confirm the lost-book charge."
+    },
+    "status": "resolved",
+    "assignee": "Neha",
+    "taken_at": "@days_ago:0.99580",
+    "at": "@days_ago:0.99790"
+   },
+   "model_calls": 2,
+   "created_at": "@days_ago:1.00000",
+   "updated_at": "@days_ago:0.99510",
+   "seed": true
+  }
+ ],
+ "messages": [
+  {
+   "ticket_id": "@oid:ld1",
+   "author": "customer",
+   "author_name": null,
+   "channel": "web",
+   "modality": "text",
+   "language": "en-IN",
+   "text": "Member M-1002, phone ending 0402. Can I renew Notes from Malabar?",
+   "text_en": "Member M-1002, phone ending 0402. Can I renew Notes from Malabar?",
+   "external_id": null,
+   "sender": "seed-m1002",
+   "meta": {
+    "seed": true
+   },
+   "seed": true,
+   "created_at": "@days_ago:3.00000"
+  },
+  {
+   "ticket_id": "@oid:ld1",
+   "author": "ai",
+   "author_name": null,
+   "channel": "web",
+   "modality": "text",
+   "language": "en-IN",
+   "text": "Thanks Dev, you're verified. I can't renew Notes from Malabar (L-5003): another member has reserved it. I can let the desk know you'd like it back when it returns.",
+   "text_en": "Thanks Dev, you're verified. I can't renew Notes from Malabar (L-5003): another member has reserved it. I can let the desk know you'd like it back when it returns.",
+   "external_id": null,
+   "sender": "seed-m1002",
+   "meta": {
+    "seed": true
+   },
+   "seed": true,
+   "created_at": "@days_ago:2.99860"
+  },
+  {
+   "ticket_id": "@oid:ld1",
+   "author": "customer",
+   "author_name": null,
+   "channel": "web",
+   "modality": "text",
+   "language": "en-IN",
+   "text": "No problem, thanks.",
+   "text_en": "No problem, thanks.",
+   "external_id": null,
+   "sender": "seed-m1002",
+   "meta": {
+    "seed": true
+   },
+   "seed": true,
+   "created_at": "@days_ago:2.99720"
+  },
+  {
+   "ticket_id": "@oid:ln1",
+   "author": "customer",
+   "author_name": null,
+   "channel": "web",
+   "modality": "text",
+   "language": "en-IN",
+   "text": "Is Learning Python Gently on the shelf?",
+   "text_en": "Is Learning Python Gently on the shelf?",
+   "external_id": null,
+   "sender": "seed-m1003",
+   "meta": {
+    "seed": true
+   },
+   "seed": true,
+   "created_at": "@days_ago:2.00000"
+  },
+  {
+   "ticket_id": "@oid:ln1",
+   "author": "ai",
+   "author_name": null,
+   "channel": "web",
+   "modality": "text",
+   "language": "en-IN",
+   "text": "Yes! Learning Python Gently by D. Kapoor (B-312) is available now. You can borrow it at the desk.",
+   "text_en": "Yes! Learning Python Gently by D. Kapoor (B-312) is available now. You can borrow it at the desk.",
+   "external_id": null,
+   "sender": "seed-m1003",
+   "meta": {
+    "seed": true
+   },
+   "seed": true,
+   "created_at": "@days_ago:1.99860"
+  },
+  {
+   "ticket_id": "@oid:lk1",
+   "author": "customer",
+   "author_name": null,
+   "channel": "web",
+   "modality": "text",
+   "language": "en-IN",
+   "text": "I returned The Clockmaker of Kochi two weeks ago and now it says I lost it. This is wrong.",
+   "text_en": "I returned The Clockmaker of Kochi two weeks ago and now it says I lost it. This is wrong.",
+   "external_id": null,
+   "sender": "seed-m1004",
+   "meta": {
+    "seed": true
+   },
+   "seed": true,
+   "created_at": "@days_ago:1.00000"
+  },
+  {
+   "ticket_id": "@oid:lk1",
+   "author": "ai",
+   "author_name": null,
+   "channel": "web",
+   "modality": "text",
+   "language": "en-IN",
+   "text": "I'm sorry, Kabir. A disputed lost-book charge needs a librarian, so I've passed your case to a teammate who will follow up shortly.",
+   "text_en": "I'm sorry, Kabir. A disputed lost-book charge needs a librarian, so I've passed your case to a teammate who will follow up shortly.",
+   "external_id": null,
+   "sender": "seed-m1004",
+   "meta": {
+    "seed": true
+   },
+   "seed": true,
+   "created_at": "@days_ago:0.99860"
+  },
+  {
+   "ticket_id": "@oid:lk1",
+   "author": "human",
+   "author_name": "Neha",
+   "channel": "web",
+   "modality": "text",
+   "language": "en-IN",
+   "text": "Hi Kabir, this is Neha. I checked the return shelf and found your copy, so I've cleared the charge.",
+   "text_en": "Hi Kabir, this is Neha. I checked the return shelf and found your copy, so I've cleared the charge.",
+   "external_id": null,
+   "sender": "seed-m1004",
+   "meta": {
+    "seed": true
+   },
+   "seed": true,
+   "created_at": "@days_ago:0.99580"
+  },
+  {
+   "ticket_id": "@oid:lk1",
+   "author": "customer",
+   "author_name": null,
+   "channel": "web",
+   "modality": "text",
+   "language": "en-IN",
+   "text": "Thank you, that was quick!",
+   "text_en": "Thank you, that was quick!",
+   "external_id": null,
+   "sender": "seed-m1004",
+   "meta": {
+    "seed": true
+   },
+   "seed": true,
+   "created_at": "@days_ago:0.99440"
+  },
+  {
+   "ticket_id": "@oid:lk1",
+   "author": "human",
+   "author_name": "Neha",
+   "channel": "web",
+   "modality": "text",
+   "language": "en-IN",
+   "text": "Glad to help. I'm closing this now.",
+   "text_en": "Glad to help. I'm closing this now.",
+   "external_id": null,
+   "sender": "seed-m1004",
+   "meta": {
+    "seed": true
+   },
+   "seed": true,
+   "created_at": "@days_ago:0.99300"
+  }
+ ],
+ "actions": [
+  {
+   "ticket_id": "@oid:ld1",
+   "customer_id": "@oid:m1002",
+   "channel": "web",
+   "tool": "verify_identity",
+   "args": {
+    "member_id": "M-1002",
+    "factor": "***"
+   },
+   "tier": "allow",
+   "decision": {
+    "result": "allow",
+    "rule_id": "verify",
+    "reason": "Identity check allowed"
+   },
+   "status": "executed",
+   "result": {
+    "verified": true
+   },
+   "idempotency_key": null,
+   "decided_by": null,
+   "decided_at": null,
+   "decision_note": null,
+   "seed": true,
+   "created_at": "@days_ago:2.99930",
+   "updated_at": "@days_ago:2.99930"
+  },
+  {
+   "ticket_id": "@oid:ld1",
+   "customer_id": "@oid:m1002",
+   "channel": "web",
+   "tool": "renew_loan",
+   "args": {
+    "loan_id": "L-5003"
+   },
+   "tier": "deny",
+   "decision": {
+    "result": "deny",
+    "rule_id": "reserved_by_other",
+    "reason": "Another member has reserved this book"
+   },
+   "status": "blocked",
+   "result": {
+    "rule_id": "reserved_by_other"
+   },
+   "idempotency_key": null,
+   "decided_by": null,
+   "decided_at": null,
+   "decision_note": null,
+   "seed": true,
+   "created_at": "@days_ago:2.99790",
+   "updated_at": "@days_ago:2.99790"
+  },
+  {
+   "ticket_id": "@oid:ln1",
+   "customer_id": "@oid:m1003",
+   "channel": "web",
+   "tool": "search_catalog",
+   "args": {
+    "query": "Learning Python Gently"
+   },
+   "tier": "allow",
+   "decision": {
+    "result": "allow",
+    "rule_id": "read",
+    "reason": "Allowed"
+   },
+   "status": "executed",
+   "result": {
+    "count": 1
+   },
+   "idempotency_key": null,
+   "decided_by": null,
+   "decided_at": null,
+   "decision_note": null,
+   "seed": true,
+   "created_at": "@days_ago:1.99930",
+   "updated_at": "@days_ago:1.99930"
+  },
+  {
+   "ticket_id": "@oid:lk1",
+   "customer_id": "@oid:m1004",
+   "channel": "web",
+   "tool": "verify_identity",
+   "args": {
+    "member_id": "M-1004",
+    "factor": "***"
+   },
+   "tier": "allow",
+   "decision": {
+    "result": "allow",
+    "rule_id": "verify",
+    "reason": "Identity check allowed"
+   },
+   "status": "executed",
+   "result": {
+    "verified": true
+   },
+   "idempotency_key": null,
+   "decided_by": null,
+   "decided_at": null,
+   "decision_note": null,
+   "seed": true,
+   "created_at": "@days_ago:0.99930",
+   "updated_at": "@days_ago:0.99930"
+  },
+  {
+   "ticket_id": "@oid:lk1",
+   "customer_id": "@oid:m1004",
+   "channel": "web",
+   "tool": "escalate",
+   "args": {
+    "note": "Member disputes a lost-book charge"
+   },
+   "tier": "escalate",
+   "decision": {
+    "result": "escalate",
+    "rule_id": "lost_book_dispute",
+    "reason": "Member disputes a lost-book charge"
+   },
+   "status": "executed",
+   "result": {
+    "escalated": true
+   },
+   "idempotency_key": null,
+   "decided_by": null,
+   "decided_at": null,
+   "decision_note": null,
+   "seed": true,
+   "created_at": "@days_ago:0.99790",
+   "updated_at": "@days_ago:0.99790"
+  },
+  {
+   "ticket_id": "@oid:lk1",
+   "customer_id": "@oid:m1004",
+   "channel": "web",
+   "tool": "human_takeover",
+   "args": {},
+   "tier": "human",
+   "decision": {
+    "result": "human",
+    "rule_id": "human",
+    "reason": "by Neha"
+   },
+   "status": "executed",
+   "result": null,
+   "idempotency_key": null,
+   "decided_by": "Neha",
+   "decided_at": "@days_ago:0.99720",
+   "decision_note": null,
+   "seed": true,
+   "created_at": "@days_ago:0.99650",
+   "updated_at": "@days_ago:0.99650"
+  },
+  {
+   "ticket_id": "@oid:lk1",
+   "customer_id": "@oid:m1004",
+   "channel": "web",
+   "tool": "human_resolve",
+   "args": {
+    "note": "Lost-book charge cleared after a shelf check."
+   },
+   "tier": "human",
+   "decision": {
+    "result": "human",
+    "rule_id": "human",
+    "reason": "by Neha"
+   },
+   "status": "executed",
+   "result": null,
+   "idempotency_key": null,
+   "decided_by": "Neha",
+   "decided_at": "@days_ago:0.99300",
+   "decision_note": null,
+   "seed": true,
+   "created_at": "@days_ago:0.99230",
+   "updated_at": "@days_ago:0.99230"
   }
  ]
 }

@@ -6,6 +6,18 @@ persona: You are the front-desk assistant of Riverside Public Library (a fake li
 policy_file: policy.md
 default_language: en-IN
 labels: {subject: member, primary: loans, money: fines, title: Library desk}
+welcome: Welcome to Riverside Library! I can search the catalogue, renew your books and look at your fines. For anything on your account I'll need your member ID and the last 4 digits of your phone number.
+hints:
+  - "Demo members (invented): M-1001 Asha Rao, phone ends 0401: two loans (one already renewed twice) and a Rs 150 fine."
+  - "M-1002 Dev Malik, phone ends 0402: a book another member has reserved, and a Rs 60 fine."
+  - "M-1003 Nisha Pillai, phone ends 0403: an overdue loan."
+suggestions:
+  - "Do you have any books by A. Menon?"
+  - "My member ID is M-1001 and my phone ends in 0401. Please renew The Monsoon Garden."
+  - "Yes please."
+  - "Please book study room B on Monday 2 November at 4 pm for one hour."
+  - "Bookings are enabled now. Please book study room B on Monday 2 November at 4 pm for one hour."
+  - "Can you waive my Rs 150 fine? I was in hospital that week."
 
 verification:
   param: member_id
@@ -21,7 +33,7 @@ collections:
   study_rooms: {}
   bookings: {owner_field: member_id}
 
-facts: [loan_id, fine_id, book_id, book_title, date, amount]
+facts: [loan_id, fine_id, book_id, book_title, booking_id, date, amount]
 protected_patterns: ['\bM-\d{4}\b', '\bL-\d{4}\b', '\bF-\d{4}\b', '\bB-\d{3}\b', '\bBK-\d{4}\b', '\bSR-[A-Z]\b']
 plugins: [book_slot]  # developer plugin; an admin must grant it in the Tools tab
 escalation_reasons: [lost_book_dispute, harassment, distress]

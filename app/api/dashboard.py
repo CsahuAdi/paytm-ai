@@ -54,13 +54,19 @@ async def ui_config() -> dict:
     roles = {n: "admin" if n in config.ADMINS else (pack_label if rt and n in rt.pack.reviewers else "reviewer") for n in config.HUMAN_AGENTS}
     if rt is None:
         return {"product": config.PRODUCT_NAME, "humans": config.HUMAN_AGENTS, "roles": roles, "languages": config.LANGUAGES,
-                "pack": None, "labels": labels, "tool_labels": {}, "features": [], "chat_url": "/static/chat.html", "chat_label": "Customer chat"}
+                "pack": None, "labels": labels, "tool_labels": {}, "features": [], "chat_url": "/static/chat.html", "chat_label": "Customer chat",
+                "welcome": "Hi! I'm the ResolveAI support assistant. I can check orders, handle refunds and replacements, and bring in a teammate when you need one.",
+                "hints": ["A demo store with invented data. The assistant verifies you with an order number and the email on that order.",
+                          "Try a damaged item, a refund above Rs 2,000 (it waits for a person on the desk), or asking for a human."],
+                "suggestions": ["Where is my order?", "My blender arrived damaged. What can you do?", "I'd like to cancel an order that hasn't shipped yet",
+                                "I need to speak to a person"]}
     paytm = "paytm" in rt.pack.channels
     return {"product": rt.pack.product, "humans": config.HUMAN_AGENTS, "roles": roles, "languages": config.LANGUAGES, "pack": rt.pack.name,
             "labels": labels | {"title": "Desk"} | rt.pack.labels, "tool_labels": rt.tool_labels(),
             "features": ["paytm_insights"] if "issue_coupon" in rt.plugins else [],
             "chat_url": "/paytm" if paytm else "/static/chat.html",
-            "chat_label": "Paytm chat (simulated)" if paytm else f"{rt.pack.labels.get('subject', 'customer').capitalize()} chat"}
+            "chat_label": "Paytm chat (simulated)" if paytm else f"{rt.pack.labels.get('subject', 'customer').capitalize()} chat",
+            "welcome": rt.pack.welcome, "suggestions": rt.pack.suggestions, "hints": rt.pack.hints}
 
 
 @router.get("/tickets")

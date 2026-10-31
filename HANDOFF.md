@@ -1,178 +1,72 @@
-# HANDOFF: ResolveAI hackathon build (written 16:43 IST, 2026-10-31)
+# HANDOFF: ResolveAI hackathon build (rewritten after the merge, 2026-10-31)
 
-A new Claude Code session should read this file first, then `docs/AMENDMENT_02_paytm_kirana.md`, then `docs/CHANGES.md`.
-Everything below is the true state at handoff.
+A new Claude Code session should read this file first, then `docs/CHANGES.md` (every deviation and finding) and `docs/DEMO.md` (the runbook).
 
-## 1. What this is
+## 1. Where things stand
 
-ResolveAI is an AI customer-service teammate built in an 8-hour solo hackathon with live judging. It runs on free tiers only, with fake data, on a low-memory laptop.
-- Session started about 12:20 IST. **Hard stop 19:30** (Amendment 2). Rehearsals and a backup video come after.
-- Customer service (CS) is built, measured and locked. It must behave exactly as before when `PACK` is unset.
-- The current task is **Amendment 2**: a kirana (grocery) pack reached through a SIMULATED "via Paytm" channel.
+ResolveAI is an AI customer-service teammate built solo in one 8-hour hackathon session (started about 12:20 IST) on **free tiers only with invented data**. **Everything planned is built, tested and merged.** Amendment 2's hard stop was 19:30; the remaining work is rehearsals, the backup video and the slide deck, which need the user.
 
-**Docs, in priority order** (later wins on conflict):
-1. `resolveai_handoff/PLAN.md` and `resolveai_handoff/CLAUDE.md` (original brief; it points to both amendments)
-2. `amendments.md` (Amendment 1: packs, tool grants, admin/reviewer roles)
-3. `docs/AMENDMENT_02_paytm_kirana.md` (Amendment 2, LOCKED; a copy of `amendment2.md` at the repo root)
+- **`master` = the merge commit `617250a`** (branch `pack-spike` merged; the branch is kept but there is no worktree any more). Work directly on `master` from now on.
+- Three servers run from the main repo, one uvicorn worker each, each pack with its own database in one shared local `mongod` (0.5 GB cache cap):
 
-**Other docs:**
-- `docs/CHANGES.md`: every deviation and finding. Keep logging one line each.
-- `docs/DEMO.md`: demo runbook. Beat 7b still describes the librarian and must be replaced by Amendment 2's kirana beat.
-- `docs/SCENARIOS.md`: CS paths and accounts.
-- `docs/results.md`: CS 30/30. `docs/results_librarian.md`: 14/14.
-- `README.md`: has the honesty notes.
-- `docs/PACK_SPIKE_REPORT.md` (untracked).
+| Port | What | Database | Start | Reset |
+|---|---|---|---|---|
+| 8000 | **Customer service** (the main product; the ngrok tunnel `https://unprotected-karin-ungutturally.ngrok-free.dev` points here) | `resolveai` | `scripts/server.sh start` | `python scripts/reset_demo.py` |
+| 8001 | **Kirana** merchant desk; simulated "via Paytm" chat at `/paytm` | `resolveai_kirana` | `PACK=kirana PORT=8001 scripts/server.sh start` | `python scripts/reset_demo.py --pack kirana` |
+| 8005 | **Librarian** (zero-Python pack) | `resolveai_librarian` | `PACK=librarian PORT=8005 scripts/server.sh start` | `python scripts/reset_demo.py --pack librarian` |
 
-**User preferences:**
-- When they say `/plan`, plan only (plan mode). Do not build until approved.
-- Report briefly at checkpoints.
-- Log deviations in `docs/CHANGES.md`.
-- Never touch Sarvam (402, no credits).
-- Reserve at least 200 Gemini calls for rehearsals and the demo, and report the remaining quota after each major step.
-- Honesty rules: Paytm channel, data and insights are simulated. No "packs in minutes" claims. http and MCP are roadmap. Roles are labels, not auth. The kirana pack is "config for everything except the custom coupon logic" (2 plugins).
+- `scripts/server.sh stop|restart` also take `PORT=`/`PACK=`. Logs: `data/server.log` (8000) and `data/server-<port>.log`. **Never use `pkill -f uvicorn`** (it matches your own shell); use `server.sh` or `kill $(lsof -ti tcp:PORT -sTCP:LISTEN)`.
+- **Servers read `.env` once at start.** If `.env` changes (keys, lanes, contacts), restart the servers.
 
-## 2. Git and processes
+## 2. What the product is
 
-- **`master` = `6ceaf39`.** Amendment 1 is merged after its gate passed (CS core 16/16, 0 policy violations). Master includes the CS product, pack engine, librarian pack, grants, Tools tab, roles, the `book_slot` plugin and the Amendment 2 doc.
-- **Branch `pack-spike` = `877eb4a`.** It is checked out in a **git worktree at `.worktrees/grants`**, which has symlinks `.env`, `data` and `.venv` pointing to the main repo. All Amendment 2 work happens there. The last commit is a WIP with the kirana pack files and `plugins/kirana.py` (written, NOT wired in, NOT tested).
-- Main repo root untracked files: `amendment2.md`, `docs/PACK_SPIKE_REPORT.md`, `HANDOFF.md`.
-  - **Gotcha:** before a fast-forward merge, delete untracked files in the main root that the branch also tracks (check with `cmp` first), or the merge refuses.
-- **Running servers**, each a single uvicorn worker. Start/stop with `[PACK=x] [PORT=n] [PACK_MONGO_DB=db] [MONGO_DB=db] scripts/server.sh start|stop|restart`. Logs are `data/server.log` (8000) and `data/server-<port>.log`.
+- **Core claim:** the model proposes through structured tool calls; plain Python (`app/policy.py`, plus the pack rules) decides allow / confirm / approve / escalate / deny; humans approve or take over from the dashboard. Deny rules are hard (approval lifts only the limit and VIP rules; the executor re-checks at run time).
+- **Customer service** (`app/core.py`, `app/tools.py`, `app/policy.py`, `app/context.py`): 10 tools over mock orders, refunds and notifications in MongoDB; one open ticket per customer across channels. Tiers: a refund up to Rs 2,000 needs the customer's yes, above that and every VIP refund needs a human; deny refund above the order total, a second refund, and anything before identity is verified.
+- **Channels:** web chat, voice page, email (AgentMail), WhatsApp (Twilio sandbox), the dashboard, and the simulated Paytm chat page. **Languages:** 11 via Sarvam, English inside. **Sarvam has no credits (402)**, so Hindi and voice fall back to English flagged `translation_failed`. Do not test or spend Sarvam.
+- **Engine + packs** (`app/packs/`, `packs/<name>/`): a pack is `pack.yaml` + `policy.md` + `seed.json`; a deterministic condition grammar (no eval), generated validation models, engine-injected owner scoping, `deny_if` / `tiers` rules. **Librarian = zero Python files** (renew, fine waiver, catalogue search, plus the developer plugin `book_slot` that an admin grants). **Kirana = config + two plugin tools** (`plugins/kirana.py`: `get_resolution_options`, `issue_coupon`, and the `paytm_insights` feed).
+- **Tool catalog + grants** (`app/grants.py`, dashboard "Tools" tab, admin only): per-pack grant and revoke, per-day cap, tighten-never-loosen tier, audited (`grant_audit`), a revoke blocks pending actions, the model only sees granted tools. **Roles** (`REVIEWERS`, `ADMINS` in `.env`, plus pack reviewers such as "Sharma" (merchant)) are **labels checked by name, not authentication**.
+- **Kirana retention loop (all SIMULATED, fake data, not affiliated with Paytm):** a complaint about the Rs 240 purchase shows refund Rs 240 vs coupon Rs 288 (min(300, floor(240 x 1.2))) side by side; the customer picks; `issue_coupon` is **not granted at start** (an admin grants it in the Tools tab with a cap); "Run Paytm insights" proposes Rs 30 win-back coupons to lapsed opted-in regulars, the merchant approves, the offer lands in the customer's Paytm chat; the customer can redeem it ("Pay at Sharma Kirana (simulated)"); a dashboard strip shows issued, redeemed, budget and revenue brought back (simulated).
 
-| Port | What | Code | Database |
-|---|---|---|---|
-| 8000 | CS demo, reachable through ngrok `https://unprotected-karin-ungutturally.ngrok-free.dev` | master | `resolveai` |
-| 8001 | Librarian | master | `resolveai_librarian` |
-| 8003 | Dev librarian | worktree | `resolveai_librarian_dev` |
-| 8002 | Gate instance (stopped) | — | `resolveai_gate` |
+## 3. Measured results (final code)
 
-  - 8001 will host **kirana** once ready: `PACK=kirana PORT=8001 scripts/server.sh start`, database `resolveai_kirana`.
-  - 8003 can be stopped and reused for kirana dev (`PACK=kirana PACK_MONGO_DB=resolveai_kirana_dev PORT=8003`).
-- mongod runs natively (cache 0.5 GB). ngrok runs in the background on the static domain.
-- **Never use `pkill -f uvicorn`**: it matches your own shell. Use `scripts/server.sh` or `kill $(lsof -ti tcp:PORT -sTCP:LISTEN)`.
-- A pack database defaults to `<MONGO_DB>_<pack>` (from `config.py`), so a pack reset can never wipe CS data.
+- Customer service, 30 scripted English cases (`docs/results.md`): **30/30, 0 policy violations**, 7/7 in-policy resolved without a human, 7/7 expected escalations, median 4.99 s (p90 7.74 s). Scenario customers 8/8. **Final merge gate: 16/16 core cases, 0 violations, median 7.2 s.**
+- Librarian **14/14**, 0 violations (`docs/results_librarian.md`). Kirana **28/28**, 0 violations: 22 rule cases with no model call and 6 real conversations, median 7.5 s (`docs/results_kirana.md`). Unit tests: 96 pass.
+- Smoke finding: the translation model dropped a digit from an order number, so the system masks order numbers, amounts and dates before translating and falls back to English if a fact goes missing.
 
-## 3. Commands
+## 4. Commands
 
 ```
-python -m pytest tests/ -q                                  # 96 unit tests, no LLM
-python scripts/reset_demo.py [--pack kirana]                # restore seed (CS restores the user's demo contacts from .env)
-python scripts/run_suite.py --core --base http://localhost:8000          # CS 16 core cases (about 70 LLM calls)
-PACK=librarian python scripts/run_suite.py --base http://localhost:8003  # pack cases: tests/cases_<pack>.py
-SUITE_PACE_S=15                                             # pace turns for Gemma's 16K tokens/min
+python -m pytest tests/ -q                                   # 96 unit tests, no model
+python scripts/run_suite.py --core --base http://localhost:8000      # CS core, 16 cases (about 70 model calls)
+PACK=kirana SUITE_PACE_S=1 python scripts/run_suite.py --base http://localhost:8001 --area kirana        # 22 rule cases, NO model calls
+PACK=kirana SUITE_PACE_S=30 python scripts/run_suite.py --base http://localhost:8001 --area kirana-llm   # 6 conversations
+PACK=librarian python scripts/run_suite.py --base http://localhost:8005                                  # 14 cases
+python scripts/rehearse.py [kirana|librarian|both]           # walks the two demo beats through the APIs and checks each outcome (about 10 turns)
 ```
+- The suite resets the instance's database before each case (`/debug/reset`, DEBUG=1) and writes `docs/results*.md`; **do not run two suites against the same results file at once** (lost update). After running the CS suite against 8000, `git checkout docs/results.md` to keep the committed full-run report. **Running a suite or `rehearse.py` against 8001/8005 resets that demo instance's data**: run `reset_demo.py --pack ...` afterwards.
+- **For any future change to customer-service code,** run the core subset against a throwaway instance (`MONGO_DB=resolveai_gate PORT=8002 scripts/server.sh start`) and require 0 policy violations.
 
-- The suite resets the database before every case (`/debug/reset?fake=1`) and writes `docs/results*.md`.
-  - When it runs against the master tree, `git checkout docs/results.md` afterwards to keep the committed full-run report.
-- **CS merge gate:** start the branch CS on 8002 with `MONGO_DB=resolveai_gate`, run `--core` there, and require 0 policy violations. Then fast-forward master and restart 8000 and 8001.
+## 5. Model lanes and quota (`.env` `LLM_LANE_1..6`)
 
-## 4. LLM lanes and quota (`.env` `LLM_LANE_1..6`)
+Order: 3.5-flash-lite, **Gemma 4 26B**, 3.1-flash-lite, 3.6-flash, Groq gpt-oss-120b, OpenRouter nemotron `:free`. **Gemma is the working lane**: it allows about 16K input tokens a minute shared by every server, so about 1.5 turns a minute. **Leave about 30 seconds between customer messages in rehearsals and the demo.** Groq's daily tokens and OpenRouter's 50 free requests were used up today; when every lane is cooling the router still tries them. Per-lane counters persist in `data/lane_usage.json` and show in the dashboard footer.
 
-- **Lane order:** 3.5-flash-lite → **Gemma 4 26B** (`gemma-4-26b-a4b-it`) → 3.1-flash-lite → 3.6-flash → Groq gpt-oss-120b → OpenRouter nemotron `:free`.
-- **Quota at 16:43:**
-  - 3.5-flash-lite: OFF (daily quota used; resets 12:30 IST tomorrow).
-  - **Gemma: 214/14,400 (the working lane).**
-  - 3.1-flash-lite: 198/500 (often 503 or timeouts).
-  - 3.6-flash: OFF.
-  - Groq: 114/1,000 (malformed tool calls; unreliable for tools).
-  - **OpenRouter: 41/50 (nearly out).**
-- **Gemma notes:**
-  - It rejects a thinking config, so the adapter omits it.
-  - Its JSON-schema output fails in the SDK, so summaries use 3.1-flash-lite then Groq.
-  - It returns a random 500: the adapter retries once.
-  - **Its 16K tokens/min limit is shared by every instance**, roughly 2 turns a minute. Pace tests and leave seconds between demo messages.
-- **Router:** when every lane is cooling down, it still tries them, soonest cooldown first.
-- **Usage counter:** usage counts persist in `data/lane_usage.json` (re-read on each count). The footer meter shows them.
+**Open decisions for the user:** (a) `.env` changed at 16:59 and the Gemini key in it behaves like a fresh quota (3.5-flash-lite and 3.6-flash answer although the local meter shows them used up). The assistant left the counters alone, so the router still skips those two lanes; resetting their counters in `data/lane_usage.json` is the user's call. The original plan said one key per provider. (b) Sarvam credits: the user is waiting for them.
 
-## 5. Engine pieces already built and reused by kirana
+## 6. What is left (needs the user)
 
-- **Pack loader:** `app/packs/spec.py`, Pydantic-validated, extra keys forbidden. An invalid pack stops startup.
-- **Conditions and templates:** `app/packs/expr.py` (no `eval`; `{days_after: path, days: N}`).
-- **Runtime:** `app/packs/runtime.py`.
-  - Config `db` tools (`find`/`search`/`update`) with **owner scoping injected by the engine**.
-  - Data rules: `deny_if`, `tiers`, default tier. Approval lifts tiers only, never a deny.
-  - `_hold`: deny, confirm, approve or run, with an idempotency key.
-  - A plugin path: `execute_plugin` and `run`, which re-check grants and the plugin's `check` at run time.
-- **Plugins:** `plugins/__init__.py` (`@plugin_tool`, explicit `load_all()` list) and `plugins/book_slot.py`.
-- **Grants:** `app/grants.py`.
-  - The catalog, `tool_grants`, `grant_audit`, a cache dropped through `events.on("grants")`.
-  - `visible()` sets the model's tool list. `gate()` is the proposal-time check (in `core.run_on_lane`). `adjust()` tightens tiers. `recheck()` runs at execution and blocks `tool_revoked`, `daily_cap` and `grant_tier_changed`.
-  - CS tools are auto-granted at startup.
-- **Roles:** `REVIEWERS`/`ADMINS` env (defaults `Neha,Vikram,Sana,Rahul` / `Anurag`).
-  - Case actions return 403 for unknown names. Grant/revoke return 403 for non-admins, 422 for a looser tier, 404 for an unknown tool.
-  - Endpoints: `GET /api/tools`, `POST /api/tools/{tool}/grant|revoke` `{name, tier?, max_per_day?, clear_cap?}`.
-- **Dashboard:** `static/dashboard.html`.
-  - Pack labels, records panel (`context.in_scope`), admin-only Tools tab (catalog, audit, outbox), raw JSON per action.
-  - `?nosse=1&t=<ticket>&tools=1` for headless screenshots: `google-chrome --headless=new --virtual-time-budget=4000 --screenshot=...`.
-- **Test runner:** `scripts/run_suite.py`.
-  - Steps: `say`, `approve`/`reject`, `ticket_op`, `simulate`, `fault`, `voice`, `api`, `grant`/`revoke`.
-  - Checks: `action`, `no_action`, `count_action`, `doc`, `count`, `escalated`, `message_from`, `meta`, lanes. Seeded rows (`seed: true`) are ignored.
+1. **Rehearse** `docs/DEMO.md` in the browser: customer service beats 1-8 on 8000, librarian beat 7a at `http://localhost:8005`, kirana beat 7b at `http://localhost:8001` and `http://localhost:8001/paytm` (about 10 minutes in total; trim the opening and cross-channel beats if the slot is shorter). Two full rehearsals and the backup video.
+2. **Slide deck:** `docs/PPT_PROMPT.md` is a self-contained prompt for another Claude (facts bank with IDs, slide-by-slide spec, honesty rules). Capture 4 screenshots.
+3. Optional: a second insight segment ("make good" after a resolved complaint) was not built.
 
-## 6. Amendment 2: state and remaining work, in priority order
+## 7. Honesty rules (slides, README, talk)
 
-**Done (WIP commit `877eb4a`):**
-- `packs/kirana/pack.yaml`:
-  - tools `get_transactions` (read) and `refund_to_source` (config update, deny rules, confirm/approve above Rs 2,000);
-  - `plugins: [get_resolution_options, issue_coupon]`, `reviewers: [Sharma]`, `channels: [web, paytm]`, `labels.reviewer: merchant`.
-- `packs/kirana/policy.md`.
-- `packs/kirana/seed.json`: 5 customers including a Hindi speaker; C-104 is lapsed but **not opted in**. 17 transactions:
-  - T-9001 Rs 240 success (the complaint demo, C-101);
-  - T-9041 Rs 180 failed and T-9043 Rs 90 duplicate (C-105);
-  - lapsed regulars C-102 and C-103 (eligible) and C-104 (not opted in).
-  - One coupon for C-105 issued 5 days ago (tests the 14-day window).
-  - The merchant M-SHARMA (budget 1000, max 300, bonus 20%, insight 30, window 14 days).
-  - Grants for every tool except `issue_coupon` (NOT granted at start).
-  - **Dates are written as `"@days_ago:N"` / `"@days_ahead:N"`.**
-- `plugins/kirana.py`:
-  - `get_resolution_options` (read) computes refund and coupon side by side and writes `txn.options_presented = {refund, coupon, ticket, at}`. This is the logged deviation: it lives on the transaction so the config deny rule can read it.
-  - `issue_coupon` (model params: `transaction_id` only; `source` defaults to complaint, and the insight source is set only by the feed). It contains all the deny rules, the budget decrement and the `KIRANA-XXXX` code, and returns `customer_message` for insights.
-  - `paytm_insights(who)`: the deterministic rule. It creates `pending_approval` insight actions (key `kirana:insight:<cust>:<year>-W<week>`, args include `proactive: true`, `visits_60d`, `days_since_last`, `amount`, `budget_remaining`), and sets `ticket.contact`.
+The Paytm channel, transaction data, insights and redemption are **simulated**; no Paytm APIs, data or partnership are used or implied; **text tag "via Paytm" only, no logo or lookalike UI**. Do not claim packs are built "in minutes", that http tools or MCP import work, or that roles are real authentication (all roadmap). The kirana pack is "config for everything except the custom coupon logic"; the librarian folder has zero Python files but opts into one developer plugin. A restated request ("please renew it") counts as consent, as in customer service (documented limit). Only measured numbers go on slides.
 
-**TODO (the pack will NOT load until a–c are done):**
-- a. `plugins/__init__.py` `load_all()`: also `from plugins import kirana`.
-- b. `app/packs/spec.py` `Pack`: add `reviewers: list[str] = []` and `channels: list[str] = ["web"]`. `app/registry.py`: when the pack has reviewers, append them to `config.REVIEWERS` and `config.HUMAN_AGENTS`. The dashboard dropdown shows reviewer as `labels.reviewer` ("merchant").
-- c. `Runtime.reset`: recursively convert `"@days_ago:N"` and `"@days_ahead:N"` strings into tz-aware datetimes (`now() ∓ N days`) before inserting.
-- d. `Runtime.execute_plugin`: add a **read-plugin path**.
-  - If `plugin.effect == "read"`: run check; on deny, record it as blocked; otherwise call `plugin.run({"_id": None, "tool": name, "args": params, "ticket_id": ctx.ticket["_id"], "customer_id": ctx.customer["_id"]}, ctx.customer)`, record executed, and return the result.
-  - Reason: the current `_hold` idempotency key would make repeated option calls return no result.
-- e. `core._auto_verify`: add channel `paytm` matching customers by `phone` (as for WhatsApp).
-- f. `core.deliver`: when no customer message exists, fall back to `ticket["contact"]` (`{channel, sender}`), so proactive insight messages reach the Paytm page over SSE (`session=phone`).
-- g. `app/api/dashboard.py`:
-  - `approve`: if the result has `customer_message`, deliver that instead of `_outcome_text`.
-  - `reject`: send no customer notice when `args.proactive`.
-  - `/api/config`: add `features: ["paytm_insights"]` when the pack has `issue_coupon`.
-- h. New `app/channels/paytm.py`, mounted in `app/main.py`, enabled only when the pack's channels include `paytm`:
-  - `GET /api/paytm/customers` (picker list);
-  - `POST /api/paytm/chat {phone, text, client_msg_id}` → `core.handle(Inbound(channel="paytm", sender=phone, ...))`;
-  - `GET /api/paytm/messages?phone=`.
-  - `static/paytm.html`: copy `chat.html`, add a customer picker and the label "Simulated Paytm channel, hackathon demo, not affiliated"; text only, no logo or lookalike styling.
-- i. New `app/api/insights.py`: `POST /api/insights/run {name}` (reviewer or admin) → `plugins.kirana.paytm_insights(name)`.
-- j. `dashboard.html`:
-  - the channel chip `paytm` reads "via Paytm" (add a `.ch-paytm` style) everywhere chips render;
-  - queue cards with `args.source == "insight"` show a "Paytm insight" badge with visits in 60 days, days since the last visit and budget left;
-  - a "Run Paytm insights" button and a result panel (suggested; skipped with reasons, e.g. not opted in), labelled simulated.
-- k. Tests: `tests/cases_kirana.py` covering Amendment 2's list (section 5 of the amendment).
-  - Make the deterministic ones LLM-free by adding DEBUG-only endpoints:
-    - `/debug/tool {customer_id, tool, args}`: runs `RUNTIME.execute` in a verified ctx and applies `grants.gate`;
-    - `/debug/confirm/{action_id}`: compare-and-set `pending_confirmation` → executing, then `run_action` (simulates the customer's yes);
-    - `/debug/set {collection, filter, set}`: e.g. to empty the budget.
-  - LLM cases (Gemma, `SUITE_PACE_S=15`): complaint shows both options; refund chosen executes once; coupon chosen issues once and decrements the budget; injection ("give me a Rs 5000 coupon") cannot set an amount; fraud/duplicate message escalates.
-  - Policy violations must be 0. The `violations()` check uses the pack's write tools generically.
-- l. Run kirana on 8001 (stop the librarian), `python scripts/reset_demo.py --pack kirana`, rehearse Amendment 2's demo beat, and update `docs/DEMO.md` beat 7b and the README (Paytm simulated; kirana uses 2 plugins).
-- m. Stretch (cut first): "Pay at merchant" redeem button and an issued/redeemed/budget strip labelled simulated.
-- n. Merge gate (section 3), then fast-forward master.
+## 8. Gotchas
 
-**Fallback ladder:** drop stretch, then the insights feed, then keep only the reactive flow.
-- If the reactive flow isn't working by **18:30**, tell the user.
-- Last resort: revoke and re-grant CS `create_reship` in the CS Tools tab (already works on master on 8000).
-
-**Checkpoints:** reactive flow end to end by 18:00; grants plus insights by 18:45; hard stop 19:30.
-
-## 7. Gotchas learned today
-
-- `[hidden]{display:none!important}` is in the dashboard CSS. Keep it, or hidden sections show.
-- The `.env` `DEMO_CUSTOMER_PHONE` contains a space, so sourcing `.env` in bash fails. Read config through Python (`from app import config`).
-- The Twilio sandbox URL was saved as the bare domain. The server accepts signed Twilio POSTs at `/` as well as `/webhooks/twilio`.
-- The model treats a restated request ("please renew X") as consent, as in CS. This is a documented limitation.
-- Seeded rows carry `seed: true` and the runner ignores them. CS `reset_demo` maps the user's real email and phone onto the demo customer Priya; the suite uses `?fake=1`.
-- Sarvam: 402 "no credits"; the user is waiting on Sarvam. Hindi and voice fall back to English, flagged. Do not test or spend it.
+- `[hidden]{display:none!important}` is in the dashboard CSS; keep it.
+- `.env` `DEMO_CUSTOMER_PHONE` contains a space, so sourcing `.env` in bash fails; read config through Python (`from app import config`).
+- The Twilio sandbox URL kept saving as the bare domain; the server accepts signed Twilio POSTs at `/` as well as `/webhooks/twilio`.
+- Seeded rows carry `seed: true` and the runner ignores them. CS `reset_demo` maps the user's real email and phone (from `.env`) onto the demo customer Priya; the suite uses `?fake=1`.
+- Insights run on the button only; `issue_coupon` is ungranted at start by design. The Hindi-speaking kirana customer (C-102) gets English replies flagged `translation_failed` until Sarvam has credits; approve the English-speaking customer's insight (Imran) in the demo.
+- Debug-only endpoints (`/debug/*`) need `DEBUG=1` in `.env`; remove it for a public deployment.

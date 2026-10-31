@@ -169,6 +169,9 @@ class Pack(Strict):
     plugins: list[str] = []  # developer-written plugin tools this pack may be granted (see plugins/); loaded, not granted
     reviewers: list[str] = []  # extra named reviewers for this pack (e.g. the merchant); a label, not authentication
     channels: list[str] = ["web"]  # extra inbound channels this pack enables (e.g. paytm: a simulated chat page)
+    welcome: str = ""  # first line shown on the chat pages (not stored as a message)
+    suggestions: list[str] = []  # tappable example messages on the chat pages (they fill the input; nothing is sent)
+    hints: list[str] = []  # short lines on the empty chat page, e.g. which invented demo accounts exist
     escalation_reasons: list[str]
     context: dict[str, list[InScope]] = {}
     tools: list[ToolDef]
