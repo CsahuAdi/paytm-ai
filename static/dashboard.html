@@ -155,7 +155,7 @@ const rs = (n) => "Rs " + Number(n).toLocaleString("en-IN");
 const PLAIN = new Set(["title", "name", "reason"]);
 const recordsLine = (records) => records.map((r) => `<b>${esc(r.collection[0].toUpperCase() + r.collection.slice(1))}:</b> ` +
   (r.items.map((it) => Object.entries(it).map(([k, v]) => typeof v === "boolean" ? (v ? k.replace(/_/g, " ") : "") :
-    k === "amount" ? rs(v) : k.endsWith("_id") || PLAIN.has(k) ? esc(v) : `${esc(k.replace(/_/g, " "))} ${esc(v)}`)
+    k === "amount" ? rs(v) : k.endsWith("_id") || PLAIN.has(k) ? esc(v) : `${esc(k.replace(/_/g, " "))} ${esc(/^\d{4}-\d{2}-\d{2}T/.test(String(v)) ? String(v).slice(0, 10) : v)}`)
     .filter(Boolean).join(" · ")).join(" | ") || "none")).join(" &nbsp; ");
 
 async function api(path, body) {
@@ -292,7 +292,7 @@ async function loadQueue() {
       ${a.args.source === "insight" ? `<div class="t" style="margin-top:2px"><span class="chip insight">Paytm insight</span><span class="chip">simulated</span></div>
         <div style="font-size:12.5px;margin:4px 0">${esc(a.args.visits_60d)} visits in 60 days · ${esc(a.args.days_since_last)} days since the last visit · budget left ${rs(a.args.budget_remaining)}</div>` : ""}
       <div class="amt">${esc(TOOL[a.tool] || a.tool)} ${a.args.amount != null ? rs(a.args.amount) : a.record && a.record.amount != null ? rs(a.record.amount) : ""}</div>
-      <div>${esc(a.args.order_number || a.args.loan_id || a.args.fine_id || a.args.transaction_id || "")} · ${esc(a.args.reason || "")}</div>
+      ${[a.args.order_number || a.args.loan_id || a.args.fine_id || a.args.transaction_id, a.args.reason].filter(Boolean).length ? `<div>${[a.args.order_number || a.args.loan_id || a.args.fine_id || a.args.transaction_id, a.args.reason].filter(Boolean).map(esc).join(" · ")}</div>` : ""}
       <div class="rule">Held by rule <b>${esc(a.rule_id)}</b>: ${esc(a.reason)}</div>
       ${a.summary ? `<div style="font-size:12.5px;margin-top:4px">${esc(typeof a.summary === "string" ? a.summary : a.summary.issue)}</div>` : ""}
       <div class="msgs">${a.last_messages.map((m) => `<div><b>${esc(m.author)}:</b> ${esc(m.text_en)}</div>`).join("")}</div>

@@ -61,6 +61,7 @@ async function openThread() {
   const rows = await (await fetch("/api/paytm/messages?phone=" + encodeURIComponent(phone))).json();
   rows.forEach((m) => show(m.id, m.author, m.text, m.author_name));
   if (es) es.close();
+  if (new URLSearchParams(location.search).has("nosse")) return;  // static screenshots only
   es = new EventSource("/api/events?session=" + encodeURIComponent(phone));  // live: replies, approval results and merchant offers
   es.onmessage = (ev) => {
     const e = JSON.parse(ev.data);
