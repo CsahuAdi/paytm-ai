@@ -22,6 +22,7 @@ from tests.cases import CASES  # noqa: E402
 
 mongo = MongoClient(config.MONGO_URI)[config.MONGO_DB]
 PACE_S = 5.0
+NOT_SEED = {"seed": {"$ne": True}}  # seeded history and the seeded queue item are not test results
 
 
 class Runner:
@@ -44,8 +45,8 @@ class Runner:
             t = mongo.tickets.find_one({"_id": t["merged_into"]})
         return t
 
-    def pending(self, tool: str, status: str) -> dict[str, Any]:
-        a = mongo.actions.find_one({"tool": tool, "status": status}, sort=[("created_at", -1)])
+    def pending(self, tool: str, status: str, seeded: bool = False) -> dict[str, Any]:
+        a = mongo.actions.find_one({"tool": tool, "status": status, **({} if seeded else NOT_SEED)}, sort=[("created_at", -1)])
         if a is None:
             raise AssertionError(f"no {status} {tool} action to act on")
         return a
@@ -78,7 +79,7 @@ class Runner:
             self.http.post("/debug/fault", json=s["fault"]).raise_for_status()
         elif "approve" in s or "reject" in s:
             kind = "approve" if "approve" in s else "reject"
-            a = self.pending(s[kind], s.get("status", "pending_approval"))
+            a = self.pending(s[kind], s.get("status", "pending_approval"), s.get("seeded", False))
             body = {"name": s.get("by", "Neha"), "note": s.get("note", "")}
             if s.get("double"):
                 with ThreadPoolExecutor(2) as pool:
@@ -113,17 +114,17 @@ class Runner:
         t = self.ticket()
         if kind == "action":
             tool, status, rule = (rest + [None])[:3]
-            q: dict[str, Any] = {"tool": tool, "status": status}
+            q: dict[str, Any] = {"tool": tool, "status": status, **NOT_SEED}
             if rule:
                 q["decision.rule_id"] = rule
             return None if mongo.actions.count_documents(q) else f"expected {tool} {status} {rule or ''}".strip()
         if kind == "no_action":
             tool, status = rest
-            n = mongo.actions.count_documents({"tool": tool, "status": status})
+            n = mongo.actions.count_documents({"tool": tool, "status": status, **NOT_SEED})
             return None if n == 0 else f"unexpected {n}x {tool} {status}"
         if kind == "count_action":
             tool, status, n = rest
-            got = mongo.actions.count_documents({"tool": tool, "status": status})
+            got = mongo.actions.count_documents({"tool": tool, "status": status, **NOT_SEED})
             return None if got == n else f"expected {n}x {tool} {status}, got {got}"
         if kind == "ticket_status":
             return None if t and t["status"] == rest[0] else f"ticket status {t and t['status']} != {rest[0]}"
@@ -146,7 +147,7 @@ class Runner:
             return None if got == status else f"{order} status {got} != {status}"
         if kind == "messages":
             n = rest[0]
-            got = mongo.messages.count_documents({"author": "customer"})
+            got = mongo.messages.count_documents({"author": "customer", **NOT_SEED})
             return None if got == n else f"customer messages {got} != {n}"
         if kind == "model_calls_frozen":
             got = (t or {}).get("model_calls", 0)
@@ -156,13 +157,13 @@ class Runner:
             return None if got > (self.model_calls_mark or 0) else "agent did not resume"
         if kind == "message_from":
             author, lang = (rest + [None])[:2]
-            q = {"author": author}
+            q = {"author": author, **NOT_SEED}
             if lang:
                 q["language"] = lang
             return None if mongo.messages.count_documents(q) else f"no {author} message {lang or ''}"
         if kind == "meta":
             key = rest[0]
-            return None if mongo.messages.count_documents({f"meta.{key}": {"$exists": True, "$ne": None}}) else f"no message with meta.{key}"
+            return None if mongo.messages.count_documents({f"meta.{key}": {"$exists": True, "$ne": None}, **NOT_SEED}) else f"no message with meta.{key}"
         if kind == "lane_used":
             return None if any(rest[0] in lane for lane in self.lanes) else f"lane {rest[0]} not used: {self.lanes}"
         if kind == "lane_not_used":
@@ -275,7 +276,7 @@ def main() -> None:
     httpx.post(f"{args.base}/debug/reset", timeout=30)
     os.makedirs(f"{config.ROOT}/data", exist_ok=True)
     path = f"{config.ROOT}/data/results.json"
-    if args.only and os.path.exists(path):  # a re-run of some cases updates the last full run instead of replacing it
+    if os.path.exists(path):  # partial runs update the saved per-case results instead of replacing them
         with open(path) as f:
             previous = {r["name"]: r for r in json.load(f)}
         previous.update({r["name"]: r for r in results})

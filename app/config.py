@@ -66,4 +66,4 @@ TTS_PERSONAS = {
 TEXT_REPLY_CAP = 900
 VOICE_REPLY_CAP = 250
 
-HUMAN_AGENTS = ["Anurag", "Neha", "Vikram"]
+HUMAN_AGENTS = [n.strip() for n in env("HUMAN_AGENTS", "Anurag,Neha,Vikram,Sana,Rahul").split(",") if n.strip()]

@@ -4,6 +4,7 @@ Demo beats: Priya (Hindi, voice + damaged item + cross-channel), Arjun (angry VI
 approval and Rs 50,000 over-total deny), Kavya (second language, unshipped order to cancel).
 Meera has two recent tickets so her next contact is the third in 30 days.
 """
+import itertools
 from datetime import timedelta
 
 from bson import ObjectId
@@ -84,7 +85,145 @@ def build(demo_contacts: bool = True) -> dict[str, list[dict]]:
         past_ticket(meera, 12, "Asked about RA-10501 delivery date; shared tracking."),
         past_ticket(meera, 5, "Desk lamp RA-10501 flickers; sent troubleshooting steps."),
     ]
-    return {"customers": customers, "orders": orders, "refunds": refunds, "tickets": tickets}
+    data = {"customers": customers, "orders": orders, "refunds": refunds, "tickets": tickets, "messages": [], "actions": []}
+    for name, docs in _scenario_data().items():
+        data[name].extend(docs)
+    return data
+
+
+# ---------- scenario and judge customers (see docs/SCENARIOS.md) ----------
+
+def _customer(cid: ObjectId, name: str, email: str, phone: str, language: str, tier: str = "standard") -> dict:
+    return {"_id": cid, "name": name, "email": email, "phone": phone, "language": language, "tier": tier,
+            "created_at": now() - timedelta(days=90)}
+
+
+def _history(cust: ObjectId, channel: str, minutes_ago: float, status: str, turns: list[tuple[str, str]],
+             actions: list[dict], resolution: str | None = None, language: str = "en-IN") -> tuple[dict, list[dict], list[dict]]:
+    """A seeded ticket with its conversation and actions, marked seed=True so tests can tell them apart."""
+    start = now() - timedelta(minutes=minutes_ago)
+    tid = ObjectId()
+    ticket = {"_id": tid, "customer_id": cust, "identity_id": None, "status": status, "mode": "ai", "language": language,
+              "script": "native", "channels": [channel], "order_ids": [], "summary": "", "summary_upto": None, "summary_version": 0,
+              "resolution": resolution, "human_note": None, "escalation": None, "model_calls": 0, "created_at": start,
+              "updated_at": start + timedelta(minutes=len(turns))}
+    msgs = [{"_id": ObjectId(), "ticket_id": tid, "author": author, "author_name": None, "channel": channel, "modality": "text",
+             "language": "en-IN", "text": text, "text_en": text, "external_id": None, "sender": f"seed-{cust}",
+             "meta": {"seed": True}, "seed": True, "created_at": start + timedelta(minutes=i)} for i, (author, text) in enumerate(turns)]
+    acts = []
+    for i, a in enumerate(actions):
+        acts.append({"_id": ObjectId(), "ticket_id": tid, "customer_id": cust, "channel": channel, "args": {}, "result": None,
+                     "idempotency_key": None, "decided_by": None, "decided_at": None, "decision_note": None, "seed": True,
+                     "created_at": start + timedelta(minutes=i + 0.5), "updated_at": start + timedelta(minutes=i + 0.5), **a})
+    return ticket, msgs, acts
+
+
+def _act(tool: str, args: dict, outcome: str, rule: str, reason: str, status: str, **extra) -> dict:
+    return {"tool": tool, "args": args, "tier": outcome, "decision": {"result": outcome, "rule_id": rule, "reason": reason},
+            "status": status, **extra}
+
+
+def _scenario_data() -> dict[str, list[dict]]:
+    ananya, karthik, sneha, farhan, ishita, rohit, lakshmi, aarav, diya = (ObjectId() for _ in range(9))
+    customers = [
+        _customer(ananya, "Ananya Gupta", "ananya.gupta@example.com", "+919800000201", "en-IN"),
+        _customer(karthik, "Karthik Reddy", "karthik.reddy@example.com", "+919800000202", "te-IN"),
+        _customer(sneha, "Sneha Patil", "sneha.patil@example.com", "+919800000203", "mr-IN"),
+        _customer(farhan, "Farhan Qureshi", "farhan.qureshi@example.com", "+919800000204", "en-IN", "vip"),
+        _customer(ishita, "Ishita Banerjee", "ishita.banerjee@example.com", "+919800000205", "bn-IN"),
+        _customer(rohit, "Rohit Malhotra", "rohit.malhotra@example.com", "+919800000206", "en-IN"),
+        _customer(lakshmi, "Lakshmi Menon", "lakshmi.menon@example.com", "+919800000207", "ml-IN"),
+        _customer(aarav, "Aarav Shah", "aarav.shah@example.com", "+919800000301", "en-IN"),
+        _customer(diya, "Diya Kapoor", "diya.kapoor@example.com", "+919800000302", "hi-IN"),
+    ]
+    serial = itertools.count(4472101, 17)
+    delivered = lambda city, d: _shipment("BlueDart", f"BD{next(serial)}IN", "delivered", -d,  # noqa: E731
+                                          [(d + 3, "picked_up", "Mumbai"), (d + 1, "in_transit", f"{city} hub"), (d, "delivered", city)])
+    orders = [
+        _order("RA-20011", ananya, "shipped", [("EB-12", "Wireless Earbuds", 1799)], 3,
+               _shipment("Delhivery", "DV8813011IN", "out_for_delivery", 0, [(3, "picked_up", "Delhi"), (1, "in_transit", "Gurugram hub"),
+                                                                               (0, "out_for_delivery", "Noida")])),
+        _order("RA-20012", ananya, "delivered", [("PC-03", "Phone Case", 499)], 9, delivered("Noida", 6)),
+        _order("RA-20021", karthik, "shipped", [("LED-6", "Smart LED Bulb (pack of 4)", 1299)], 12,
+               _shipment("Ekart", "EK5521021IN", "lost", 5, [(11, "picked_up", "Hyderabad"), (9, "in_transit", "Vijayawada hub"),
+                                                              (6, "lost", "Vijayawada hub")])),
+        _order("RA-20031", sneha, "delivered", [("PCK-5", "Pressure Cooker 5L", 2499)], 6, delivered("Pune", 2)),
+        _order("RA-19876", sneha, "delivered", [("MXR-2", "Mixer Grinder", 3100)], 60, delivered("Pune", 55), refund_total=3100),
+        _order("RA-20041", farhan, "processing", [("AP-900", "Air Purifier", 18999)], 1, None),
+        _order("RA-20042", farhan, "delivered", [("CF-1", "Coffee Beans 1kg", 899)], 9, delivered("Lucknow", 1)),
+        _order("RA-20051", ishita, "delivered", [("SAR-1", "Silk Saree", 3200), ("BLS-2", "Blouse Piece", 650)], 7, delivered("Kolkata", 3)),
+        _order("RA-20052", ishita, "delivered", [("DUP-4", "Cotton Dupatta", 1100)], 25, delivered("Kolkata", 20), refund_total=1100),
+        _order("RA-20061", rohit, "delivered", [("GC-5", "Gaming Console", 39999)], 5,
+               _shipment("BlueDart", "BD4472610IN", "delivered", -2, [(4, "picked_up", "Mumbai"), (3, "in_transit", "Thane hub"),
+                                                                     (2, "delivered (signed by R. Malhotra)", "Mumbai")])),
+        _order("RA-20071", lakshmi, "shipped", [("AYO-3", "Ayurvedic Oil Set", 750)], 10,
+               _shipment("Delhivery", "DV8813071IN", "delayed", 2, [(9, "picked_up", "Kochi"), (6, "delayed", "Kochi hub")])),
+        _order("RA-30001", aarav, "delivered", [("BTS-7", "Bluetooth Speaker", 2999)], 6, delivered("Ahmedabad", 2)),
+        _order("RA-30002", aarav, "shipped", [("DSK-2", "Desk Organizer", 599)], 2,
+               _shipment("Ekart", "EK5530002IN", "in_transit", 2, [(1, "picked_up", "Surat"), (0, "in_transit", "Ahmedabad hub")])),
+        _order("RA-30011", diya, "delivered", [("KUR-9", "Kurti Set", 1450)], 5, delivered("Jaipur", 1)),
+        _order("RA-30012", diya, "processing", [("BED-3", "Double Bedsheet", 1899)], 0, None),
+    ]
+    oid = {o["order_number"]: o["_id"] for o in orders}
+    refunds = [
+        {"_id": ObjectId(), "order_id": oid["RA-19876"], "ticket_id": None, "amount": 3100, "reason": "Motor burnt out",
+         "idempotency_key": "seed:refund:RA-19876", "created_at": now() - timedelta(days=50)},
+        {"_id": ObjectId(), "order_id": oid["RA-20052"], "ticket_id": None, "amount": 1100, "reason": "Colour faded after first wash",
+         "idempotency_key": "seed:refund:RA-20052", "created_at": now() - timedelta(days=10)},
+    ]
+    verify = lambda order: _act("verify_identity", {"order_number": order, "factor": "***"}, "allow", "verify",  # noqa: E731
+                                "Identity check allowed", "executed", result={"verified": True})
+    tickets, messages, actions = [], [], []
+
+    def add(t: tuple[dict, list[dict], list[dict]]) -> dict:
+        tickets.append(t[0])
+        messages.extend(t[1])
+        actions.extend(t[2])
+        return t[0]
+
+    add(_history(ananya, "web", 6 * 1440, "resolved", [
+        ("customer", "Hi, where is my phone case? Order RA-20012, email ananya.gupta@example.com"),
+        ("ai", "Thanks Ananya, you're verified. Your order RA-20012 is out for delivery and should reach you today.")],
+        [verify("RA-20012"), _act("get_tracking", {"order_number": "RA-20012"}, "allow", "read", "Allowed", "executed",
+                                  result={"order_number": "RA-20012"})],
+        resolution="Shared tracking for RA-20012; delivered the same day."))
+    sneha_t = add(_history(sneha, "email", 50 * 1440, "resolved", [
+        ("customer", "My mixer grinder RA-19876 stopped working, the motor burnt out. I want a full refund of Rs 3,100."),
+        ("ai", "I'm sorry about that. A refund of Rs 3,100 is above our automatic limit, so a teammate is reviewing it."),
+        ("ai", "Good news: a teammate approved your refund of Rs 3,100 for order RA-19876. It has been processed.")],
+        [verify("RA-19876"),
+         _act("issue_refund", {"order_number": "RA-19876", "amount": 3100, "reason": "Motor burnt out"}, "approve", "refund_limit",
+              "Refund above Rs 2000 needs human approval", "executed", idempotency_key="seed:act:refund:RA-19876",
+              decided_by="Neha", decided_at=now() - timedelta(days=50) + timedelta(minutes=40),
+              result={"refunded": 3100, "order_number": "RA-19876", "systems": ["payments", "orders", "notifications"]})],
+        resolution="Refunded Rs 3,100 for RA-19876 after approval by Neha."))
+    refunds[0]["ticket_id"] = sneha_t["_id"]
+    ishita_t = add(_history(ishita, "whatsapp", 10 * 1440, "resolved", [
+        ("customer", "The dupatta from RA-20052 faded after one wash. Can I get my Rs 1,100 back?"),
+        ("ai", "I'm sorry about that. I can refund Rs 1,100 for order RA-20052. Shall I go ahead?"),
+        ("customer", "Yes please"),
+        ("ai", "Done: Rs 1,100 has been refunded for order RA-20052.")],
+        [verify("RA-20052"),
+         _act("issue_refund", {"order_number": "RA-20052", "amount": 1100, "reason": "Colour faded"}, "confirm", "refund_confirm",
+              "Customer must confirm the refund", "executed", idempotency_key="seed:act:refund:RA-20052", decided_by="customer",
+              decided_at=now() - timedelta(days=10) + timedelta(minutes=2),
+              result={"refunded": 1100, "order_number": "RA-20052", "systems": ["payments", "orders", "notifications"]})],
+        resolution="Refunded Rs 1,100 for RA-20052 (colour faded)."))
+    refunds[1]["ticket_id"] = ishita_t["_id"]
+    farhan_t = add(_history(farhan, "web", 25, "pending_approval", [
+        ("customer", "Order RA-20042, email farhan.qureshi@example.com. My coffee beans arrived 4 days late. "
+                     "I'd like a Rs 899 refund as goodwill."),
+        ("ai", "I'm sorry for the delay, Farhan. As a VIP customer your refund request of Rs 899 goes to a teammate for review; "
+               "you'll hear back shortly.")],
+        [verify("RA-20042")]))
+    actions.append({"_id": ObjectId(), "ticket_id": farhan_t["_id"], "customer_id": farhan, "channel": "web", "tool": "issue_refund",
+                    "args": {"order_number": "RA-20042", "amount": 899, "reason": "Delivered 4 days late (goodwill)"},
+                    "tier": "approve", "decision": {"result": "approve", "rule_id": "vip_review", "reason": "Every VIP refund needs human approval"},
+                    "status": "pending_approval", "result": None, "idempotency_key": f"refund:{farhan_t['_id']}:RA-20042:899",
+                    "decided_by": None, "decided_at": None, "decision_note": None, "seed": True,
+                    "created_at": now() - timedelta(minutes=24), "updated_at": now() - timedelta(minutes=24)})
+    farhan_t["order_ids"] = [oid["RA-20042"]]
+    return {"customers": customers, "orders": orders, "refunds": refunds, "tickets": tickets, "messages": messages, "actions": actions}
 
 
 async def reset(demo_contacts: bool = True) -> dict[str, int]:

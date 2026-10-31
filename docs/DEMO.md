@@ -18,7 +18,7 @@ All people, orders and emails are invented, except the demo customer Priya's ema
 
 | # | Time | Where | You do / say | Judges see |
 |---|---|---|---|---|
-| 1 | 30 s | Dashboard | Walk the ticket list, Needs-attention queue, footer meters (LLM lanes, Sarvam spend) | The human team's desk |
+| 1 | 30 s | Dashboard | Walk the ticket list and footer meters, then **Approve** Farhan's queued Rs 899 VIP refund (rule `vip_review`) | The human team's desk; one-click approval executes once and the customer is told (no LLM call) |
 | 2 | 60 s | Voice (Auto) | Hold and say: **"नमस्ते, मेरा ऑर्डर RA-10234 कहाँ है? मेरे फ़ोन के आखिरी चार अंक 7567 हैं।"** | Spoken Hindi reply; dashboard shows the English text and the identity check |
 | 3 | 75 s | Chat | **"My blender from order RA-10234 arrived broken. My email is `<DEMO_CUSTOMER_EMAIL>`. Please refund it and send a replacement."** then **"Yes, please go ahead with both."** | Refund Rs 1,499 + replacement held for confirmation, then executed across payments, orders and notifications, each step in the timeline with its rule |
 | 4 | 45 s | WhatsApp or Gmail | **"Any update?"** | Same ticket continues; channel badge changes; no re-verification |
@@ -36,5 +36,7 @@ All people, orders and emails are invented, except the demo customer Priya's ema
 | Tunnel down | Run beats 1-3 and 5-8 locally; replay beat 4 with `python scripts/simulate_channels.py email --sender <DEMO_CUSTOMER_EMAIL> --text "Any update?"` |
 | Twilio trial messages run out | Use Gmail for beat 4. |
 | Anything stuck | `python scripts/reset_demo.py` and restart from beat 1. |
+
+Paths, accounts and expected tool calls for every scenario: `docs/SCENARIOS.md`. Judge accounts for free play: Aarav, Diya, Ananya.
 
 Judges trying WhatsApp: send **`join opinion-combination`** to **+1 415 523 8886**, then message it. The trial allows about 100 messages in total.

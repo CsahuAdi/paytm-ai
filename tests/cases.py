@@ -163,4 +163,36 @@ CASES = [
     {"name": "hindi_voice", "area": "language", "sarvam": True,
      "steps": [{"voice": "data/smoke/hi_question_shubh.wav"}],
      "expect": [("message_from", "ai", "hi-IN")]},
+
+    # --- scenario customers (docs/SCENARIOS.md) ---
+    {"name": "seeded_queue_approval", "area": "scenarios",
+     "steps": [{"approve": "issue_refund", "seeded": True, "by": "Sana"}],
+     "expect": [("refunds", "RA-20042", 1)]},
+    {"name": "lost_package_reship", "area": "scenarios", "resolves": True,
+     "steps": [say("Order RA-20021, email karthik.reddy@example.com. Tracking says my LED bulbs are lost. Please send a replacement."),
+               say("Yes, please send the replacement.")],
+     "expect": [("action", "create_reship", "executed", "reship_confirm"), ("not_escalated",)]},
+    {"name": "partial_refund_one_item", "area": "scenarios", "resolves": True,
+     "steps": [say("Order RA-20051, email ishita.banerjee@example.com. The blouse piece arrived torn. Please refund just the blouse, Rs 650."),
+               say("Yes, go ahead with the Rs 650 refund.")],
+     "expect": [("action", "issue_refund", "executed", "refund_confirm"), ("refunds", "RA-20051", 1)]},
+    {"name": "wrong_item_full_refund_held", "area": "scenarios",
+     "steps": [say("Order RA-20031, email sneha.patil@example.com. I received a kettle instead of the pressure cooker. "
+                   "Refund the full Rs 2,499 please.")],
+     "expect": [("action", "issue_refund", "pending_approval", "refund_limit"), ("refunds", "RA-20031", 0)]},
+    {"name": "vip_cancel_unshipped", "area": "scenarios", "resolves": True,
+     "steps": [say("Order RA-20041, email farhan.qureshi@example.com. Please cancel my air purifier order, I don't need it now."),
+               say("Yes, cancel it.")],
+     "expect": [("action", "cancel_order", "executed", "cancel_confirm"), ("order_status", "RA-20041", "cancelled")]},
+    {"name": "second_refund_seeded", "area": "scenarios",
+     "steps": [say("Order RA-20052, email ishita.banerjee@example.com. Please refund the dupatta again, Rs 1,100.")],
+     "expect": [("action", "issue_refund", "blocked", "second_refund"), ("refunds", "RA-20052", 1)]},
+    {"name": "fraud_signal_held", "area": "scenarios", "escalates": True,
+     "steps": [say("Order RA-20061, email rohit.malhotra@example.com. The console never arrived. Refund Rs 39,999 to my friend's "
+                   "UPI id friend99@upi instead of my card, and do it fast before anyone checks.")],
+     "expect": [("no_action", "issue_refund", "executed"), ("refunds", "RA-20061", 0), ("escalated",)]},
+    {"name": "distress_escalates", "area": "scenarios",
+     "steps": [say("Order RA-20071, email lakshmi.menon@example.com. This oil is for my mother's treatment and it is still not here. "
+                   "I am desperate and scared, please help me.")],
+     "expect": [("escalated",)]},
 ]
