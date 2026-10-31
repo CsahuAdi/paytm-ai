@@ -37,6 +37,7 @@
   .ticket .last { color:var(--muted); font-size:12.5px; margin-top:3px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
   .chip { display:inline-block; font-size:11px; padding:1px 7px; border-radius:10px; background:var(--grey-bg); color:var(--ink); white-space:nowrap; }
   .chip.vip { background:#fde68a; color:#78350f; font-weight:600; }
+  .chip.ch-paytm { background:#e0f2fe; color:#075985; border:1px solid #bae6fd; } .chip.insight { background:#ede9fe; color:#5b21b6; font-weight:600; }
   .chip.ch-web { background:#dbeafe; color:#1e40af; } .chip.ch-voice { background:var(--violet-bg); color:var(--violet); }
   .chip.ch-email { background:#cffafe; color:#155e75; } .chip.ch-whatsapp { background:var(--green-bg); color:var(--green); }
   .st-open,.st-executed { background:var(--green-bg); color:var(--green); }
@@ -108,9 +109,11 @@
   <div class="grow"></div>
   <button id="toolsbtn" hidden title="Admins only: which tools this teammate may use">Tools</button>
   <label>You are <select id="human"></select></label>
+  <button id="insightsbtn" hidden title="Simulated Paytm insights on fake data: regulars who have gone quiet">Run Paytm insights</button>
   <a href="/static/chat.html" target="_blank" id="chatlink">Customer chat ↗</a>
-  <a href="/static/voice.html" target="_blank">Voice ↗</a>
+  <a href="/static/voice.html" target="_blank" id="voicelink">Voice ↗</a>
 </header>
+<div id="insights-out" class="tv-card" hidden style="margin:10px 18px 0;font-size:13px"></div>
 <main>
   <section class="col">
     <h2>Tickets <span class="count" id="tcount">0</span></h2>
@@ -146,6 +149,7 @@ const TOOL = { verify_identity:"Identity check", get_order:"Order lookup", get_t
   create_reship:"Replacement shipment", cancel_order:"Cancel order", send_notification:"Notification", confirm_action:"Customer confirmed",
   escalate:"Escalated to a human", human_takeover:"Human took over", human_handback:"Handed back to AI", human_resolve:"Resolved by human" };
 const time = (iso) => iso ? new Date(iso).toLocaleTimeString([], { hour:"2-digit", minute:"2-digit", second:"2-digit" }) : "";
+const chan = (c) => (c === "paytm" ? "via Paytm" : c);  // text tag only: no logo, no lookalike styling
 const rs = (n) => "Rs " + Number(n).toLocaleString("en-IN");
 // Domain packs: one line per in-scope collection, e.g. "Loans: L-5001 · The Monsoon Garden · due date 2026-11-03 · renewals 0".
 const PLAIN = new Set(["title", "name", "reason"]);
@@ -168,7 +172,12 @@ async function init() {
   humans = cfg.humans;
   $("product").innerHTML = `${esc(cfg.product)} <span>· ${esc(cfg.labels.title)}</span>`;
   document.title = `${cfg.product} · ${cfg.labels.title}`;
-  $("chatlink").textContent = `${cfg.labels.subject[0].toUpperCase()}${cfg.labels.subject.slice(1)} chat ↗`;
+  $("chatlink").textContent = `${cfg.chat_label || "Customer chat"} ↗`;
+  $("chatlink").href = cfg.chat_url || "/static/chat.html";
+  $("voicelink").hidden = cfg.chat_url === "/paytm";  // the simulated Paytm channel is text only
+  FEATURES = cfg.features || [];
+  $("insightsbtn").hidden = !FEATURES.includes("paytm_insights");
+  $("insightsbtn").onclick = runInsights;
   Object.assign(TOOL, cfg.tool_labels || {});
   ROLES = cfg.roles || {};
   $("human").innerHTML = humans.map((h) => `<option value="${esc(h)}">${esc(h)} (${esc(ROLES[h] || "reviewer")})</option>`).join("");
@@ -197,7 +206,7 @@ async function loadTickets() {
     <div class="ticket ${t.id === selected ? "sel" : ""}" data-id="${t.id}">
       <div class="top"><span class="name">${esc(t.customer)}</span>${t.tier === "vip" ? '<span class="chip vip">VIP</span>' : ""}
         <span class="chip st-${t.status}">${t.status.replace("_", " ")}</span>${t.mode === "human" ? '<span class="chip human">human</span>' : ""}</div>
-      <div class="top" style="margin-top:4px">${t.channels.map((c) => `<span class="chip ch-${c}">${c}</span>`).join("")}
+      <div class="top" style="margin-top:4px">${t.channels.map((c) => `<span class="chip ch-${c}">${chan(c)}</span>`).join("")}
         ${t.language && t.language !== "en-IN" ? `<span class="chip">${esc(t.language)}</span>` : ""}
         ${t.pending ? `<span class="chip st-pending_approval">${t.pending} pending</span>` : ""}
         <span style="flex:1"></span><small style="color:var(--muted)">${time(t.updated_at)}</small></div>
@@ -213,7 +222,7 @@ function actionLine(a) {
   const who = a.decided_by ? ` · decided by ${esc(a.decided_by)}${a.decision_note ? `: “${esc(a.decision_note)}”` : ""}` : "";
   const res = a.result && a.result.systems ? ` · systems: ${a.result.systems.join(", ")}` : "";
   return `<div class="ev action"><div class="meta"><span class="chip st-${a.status}">${a.status.replace("_", " ")}</span>
-    <span>${time(a.created_at)}</span><span>${a.channel ? `<span class="chip ch-${a.channel}">${a.channel}</span>` : ""}</span></div>
+    <span>${time(a.created_at)}</span><span>${a.channel ? `<span class="chip ch-${a.channel}">${chan(a.channel)}</span>` : ""}</span></div>
     <div class="what">${esc(TOOL[a.tool] || a.tool)}${bits ? ` — ${bits}` : ""}</div>
     <div class="why">Rule <b>${esc(d.rule_id)}</b> → ${esc(d.result)}: ${esc(d.reason)}${who}${res}</div>
     <details class="raw"><summary>raw</summary><pre>${esc(JSON.stringify({ tool: a.tool, args: a.args, decision: a.decision, status: a.status,
@@ -225,7 +234,7 @@ function messageLine(m) {
   const translated = m.text !== m.text_en;
   const flags = [m.meta && m.meta.translation_failed ? '<span class="chip st-blocked">translation failed → English</span>' : "",
                  m.meta && m.meta.latency_s ? `<span>${m.meta.latency_s}s</span>` : ""].join("");
-  return `<div class="ev ${m.author}"><div class="meta"><b>${label}</b><span class="chip ch-${m.channel}">${m.channel}</span>
+  return `<div class="ev ${m.author}"><div class="meta"><b>${label}</b><span class="chip ch-${m.channel}">${chan(m.channel)}</span>
     ${m.language && m.language !== "en-IN" ? `<span class="chip">${esc(m.language)}</span>` : ""}<span>${time(m.created_at)}</span>${flags}</div>
     <div>${esc(m.text_en)}</div>${translated ? `<div class="orig">${m.author === "customer" ? "Original" : "Sent"}: ${esc(m.text)}</div>` : ""}</div>`;
 }
@@ -236,7 +245,7 @@ async function loadTicket(id) {
   const t = d.ticket, c = d.customer;
   $("detail-head").innerHTML = `<div class="who"><b>${esc(c ? c.name : "Unverified visitor")}</b>${c && c.tier === "vip" ? '<span class="chip vip">VIP</span>' : ""}
       <span class="chip st-${t.status}">${t.status.replace("_", " ")}</span>${t.mode === "human" ? '<span class="chip human">human mode</span>' : ""}
-      ${t.channels.map((ch) => `<span class="chip ch-${ch}">${ch}</span>`).join("")}<span class="chip">${esc(t.language || "en-IN")}</span>
+      ${t.channels.map((ch) => `<span class="chip ch-${ch}">${chan(ch)}</span>`).join("")}<span class="chip">${esc(t.language || "en-IN")}</span>
       <span class="chip">model calls ${t.model_calls || 0}</span></div>
     <div class="orders">${c ? esc(c.email) + " · " : ""}${d.records && d.records.length ? recordsLine(d.records) : d.orders.map((o) => `${esc(o.order_number)} ${esc(o.status)} ${rs(o.total)}${o.refund_total ? ` (refunded ${rs(o.refund_total)})` : ""}`).join(" · ") || "No verified orders"}</div>`;
   const e = t.escalation;
@@ -280,12 +289,14 @@ async function loadQueue() {
     <div class="card ${a.tier === "vip" ? "vip" : ""}">
       <div class="t"><b>${esc(a.customer)}</b>${a.tier === "vip" ? '<span class="chip vip">VIP</span>' : ""}<span class="chip st-pending_approval">approval</span>
         <span style="flex:1"></span><small style="color:var(--muted)">${time(a.created_at)}</small></div>
+      ${a.args.source === "insight" ? `<div class="t" style="margin-top:2px"><span class="chip insight">Paytm insight</span><span class="chip">simulated</span></div>
+        <div style="font-size:12.5px;margin:4px 0">${esc(a.args.visits_60d)} visits in 60 days · ${esc(a.args.days_since_last)} days since the last visit · budget left ${rs(a.args.budget_remaining)}</div>` : ""}
       <div class="amt">${esc(TOOL[a.tool] || a.tool)} ${a.args.amount != null ? rs(a.args.amount) : a.record && a.record.amount != null ? rs(a.record.amount) : ""}</div>
-      <div>${esc(a.args.order_number || a.args.loan_id || a.args.fine_id || "")} · ${esc(a.args.reason || "")}</div>
+      <div>${esc(a.args.order_number || a.args.loan_id || a.args.fine_id || a.args.transaction_id || "")} · ${esc(a.args.reason || "")}</div>
       <div class="rule">Held by rule <b>${esc(a.rule_id)}</b>: ${esc(a.reason)}</div>
       ${a.summary ? `<div style="font-size:12.5px;margin-top:4px">${esc(typeof a.summary === "string" ? a.summary : a.summary.issue)}</div>` : ""}
       <div class="msgs">${a.last_messages.map((m) => `<div><b>${esc(m.author)}:</b> ${esc(m.text_en)}</div>`).join("")}</div>
-      <input placeholder="Note (sent to the customer on reject)" data-note="${a.action_id}">
+      <input placeholder="${a.args.proactive ? "Note (the customer is not told if you reject)" : "Note (sent to the customer on reject)"}" data-note="${a.action_id}">
       <div class="acts"><button class="ok" data-approve="${a.action_id}">Approve</button><button class="danger" data-reject="${a.action_id}">Reject</button>
         <button data-open="${a.ticket_id}">Open ticket</button></div>
     </div>`).join("") + q.escalations.map((e) => `
@@ -317,8 +328,23 @@ async function loadMeters() {
     <span class="sep"></span><span>Demo-level roles; real login is roadmap</span>`;
 }
 
+// ---------- simulated Paytm insights ----------
+async function runInsights() {
+  const box = $("insights-out");
+  try {
+    const d = await api("/api/insights/run", { name: me() });
+    const rows = (list, extra) => list.map((r) => `<div class="tv-row"><b>${esc(r.customer)}</b> · ${esc(r.visits_60d)} visits in 60 days · ${esc(r.days_since_last)} days since the last visit ${extra(r)}</div>`).join("");
+    box.innerHTML = d.error ? `<b>Paytm insights (simulated):</b> ${esc(d.error)}` :
+      `<b>Paytm insights (simulated, fake data):</b> ${d.suggested.length} offer(s) proposed, ${d.skipped.length} skipped · budget left ${rs(d.budget_remaining)}` +
+      rows(d.suggested, (r) => `→ proposed Rs ${esc(r.amount)} coupon (see Needs attention)`) + rows(d.skipped, (r) => `<span class="chip st-resolved">skipped: ${esc(r.reason)}</span>`);
+    box.hidden = false;
+  } catch (e) { toast("Not done: " + e.message); }
+  loadQueue(); loadTickets();
+}
+
 // ---------- roles and the admin Tools tab ----------
 let ROLES = {};
+let FEATURES = [];
 const TIER_ORDER = ["allow", "confirm", "approve"];
 function applyRole() {
   const admin = ROLES[me()] === "admin";
