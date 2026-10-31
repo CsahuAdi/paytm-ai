@@ -253,6 +253,16 @@ class Runtime:
     def tool_labels(self) -> dict[str, str]:
         return {t.name: t.label or t.name.replace("_", " ").capitalize() for t in self.pack.tools}
 
+    async def target(self, action: dict[str, Any]) -> dict[str, Any] | None:
+        """The record a held action would change (for the approval card), scoped to the action's subject."""
+        tool = self.tools.get(action["tool"])
+        if tool is None or tool.effect == "read":
+            return None
+        customer = await store.db.customers.find_one({"_id": action.get("customer_id")})
+        scopes = {"params": action["args"], "session": {"subject_id": (customer or {}).get(self.pack.verification.lookup["field"])}}
+        doc = await store.db[tool.db.collection].find_one(self.scoped_filter(tool.db.collection, tool.db.filter, scopes), {"_id": 0})
+        return jsonable(doc)
+
     async def records(self, customer: dict[str, Any] | None) -> list[dict[str, Any]]:
         """Dashboard records panel: the in-scope collections for a verified subject."""
         if not customer:

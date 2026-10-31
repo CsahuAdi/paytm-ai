@@ -92,7 +92,7 @@
   <h1 id="product">ResolveAI <span>· Support desk</span></h1>
   <div class="grow"></div>
   <label>You are <select id="human"></select></label>
-  <a href="/static/chat.html" target="_blank">Customer chat ↗</a>
+  <a href="/static/chat.html" target="_blank" id="chatlink">Customer chat ↗</a>
   <a href="/static/voice.html" target="_blank">Voice ↗</a>
 </header>
 <main>
@@ -123,6 +123,12 @@ const TOOL = { verify_identity:"Identity check", get_order:"Order lookup", get_t
   escalate:"Escalated to a human", human_takeover:"Human took over", human_handback:"Handed back to AI", human_resolve:"Resolved by human" };
 const time = (iso) => iso ? new Date(iso).toLocaleTimeString([], { hour:"2-digit", minute:"2-digit", second:"2-digit" }) : "";
 const rs = (n) => "Rs " + Number(n).toLocaleString("en-IN");
+// Domain packs: one line per in-scope collection, e.g. "Loans: L-5001 · The Monsoon Garden · due date 2026-11-03 · renewals 0".
+const PLAIN = new Set(["title", "name", "reason"]);
+const recordsLine = (records) => records.map((r) => `<b>${esc(r.collection[0].toUpperCase() + r.collection.slice(1))}:</b> ` +
+  (r.items.map((it) => Object.entries(it).map(([k, v]) => typeof v === "boolean" ? (v ? k.replace(/_/g, " ") : "") :
+    k === "amount" ? rs(v) : k.endsWith("_id") || PLAIN.has(k) ? esc(v) : `${esc(k.replace(/_/g, " "))} ${esc(v)}`)
+    .filter(Boolean).join(" · ")).join(" | ") || "none")).join(" &nbsp; ");
 
 async function api(path, body) {
   const r = await fetch(path, body ? { method:"POST", headers:{ "content-type":"application/json" }, body:JSON.stringify(body) } : {});
@@ -136,7 +142,10 @@ const me = () => $("human").value;
 async function init() {
   const cfg = await api("/api/config");
   humans = cfg.humans;
-  $("product").innerHTML = `${esc(cfg.product)} <span>· Support desk</span>`;
+  $("product").innerHTML = `${esc(cfg.product)} <span>· ${esc(cfg.labels.title)}</span>`;
+  document.title = `${cfg.product} · ${cfg.labels.title}`;
+  $("chatlink").textContent = `${cfg.labels.subject[0].toUpperCase()}${cfg.labels.subject.slice(1)} chat ↗`;
+  Object.assign(TOOL, cfg.tool_labels || {});
   $("human").innerHTML = humans.map((h) => `<option>${esc(h)}</option>`).join("");
   if (humans.includes(store.get("ra_human"))) $("human").value = store.get("ra_human");
   $("human").onchange = () => store.set("ra_human", me());
@@ -172,7 +181,7 @@ async function loadTickets() {
 
 function actionLine(a) {
   const args = a.args || {};
-  const bits = [args.order_number, args.amount != null ? rs(args.amount) : null, args.reason, args.note].filter(Boolean).map(esc).join(" · ");
+  const bits = [args.order_number || args.loan_id || args.fine_id || args.member_id, args.amount != null ? rs(args.amount) : null, args.reason, args.note].filter(Boolean).map(esc).join(" · ");
   const d = a.decision || {};
   const who = a.decided_by ? ` · decided by ${esc(a.decided_by)}${a.decision_note ? `: “${esc(a.decision_note)}”` : ""}` : "";
   const res = a.result && a.result.systems ? ` · systems: ${a.result.systems.join(", ")}` : "";
@@ -200,7 +209,7 @@ async function loadTicket(id) {
       <span class="chip st-${t.status}">${t.status.replace("_", " ")}</span>${t.mode === "human" ? '<span class="chip human">human mode</span>' : ""}
       ${t.channels.map((ch) => `<span class="chip ch-${ch}">${ch}</span>`).join("")}<span class="chip">${esc(t.language || "en-IN")}</span>
       <span class="chip">model calls ${t.model_calls || 0}</span></div>
-    <div class="orders">${c ? esc(c.email) + " · " : ""}${d.orders.map((o) => `${esc(o.order_number)} ${esc(o.status)} ${rs(o.total)}${o.refund_total ? ` (refunded ${rs(o.refund_total)})` : ""}`).join(" · ") || "No verified orders"}</div>`;
+    <div class="orders">${c ? esc(c.email) + " · " : ""}${d.records && d.records.length ? recordsLine(d.records) : d.orders.map((o) => `${esc(o.order_number)} ${esc(o.status)} ${rs(o.total)}${o.refund_total ? ` (refunded ${rs(o.refund_total)})` : ""}`).join(" · ") || "No verified orders"}</div>`;
   const e = t.escalation;
   if (e && t.status === "escalated" || (e && t.mode === "human")) {
     const h = e.handoff_summary;
@@ -242,8 +251,8 @@ async function loadQueue() {
     <div class="card ${a.tier === "vip" ? "vip" : ""}">
       <div class="t"><b>${esc(a.customer)}</b>${a.tier === "vip" ? '<span class="chip vip">VIP</span>' : ""}<span class="chip st-pending_approval">approval</span>
         <span style="flex:1"></span><small style="color:var(--muted)">${time(a.created_at)}</small></div>
-      <div class="amt">${esc(TOOL[a.tool] || a.tool)} ${a.args.amount != null ? rs(a.args.amount) : ""}</div>
-      <div>${esc(a.args.order_number || "")} · ${esc(a.args.reason || "")}</div>
+      <div class="amt">${esc(TOOL[a.tool] || a.tool)} ${a.args.amount != null ? rs(a.args.amount) : a.record && a.record.amount != null ? rs(a.record.amount) : ""}</div>
+      <div>${esc(a.args.order_number || a.args.loan_id || a.args.fine_id || "")} · ${esc(a.args.reason || "")}</div>
       <div class="rule">Held by rule <b>${esc(a.rule_id)}</b>: ${esc(a.reason)}</div>
       ${a.summary ? `<div style="font-size:12.5px;margin-top:4px">${esc(typeof a.summary === "string" ? a.summary : a.summary.issue)}</div>` : ""}
       <div class="msgs">${a.last_messages.map((m) => `<div><b>${esc(m.author)}:</b> ${esc(m.text_en)}</div>`).join("")}</div>

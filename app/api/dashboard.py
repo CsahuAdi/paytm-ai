@@ -89,7 +89,8 @@ async def _card(a: dict[str, Any], custs: dict[Any, dict[str, Any]]) -> dict[str
     t = await store.db.tickets.find_one({"_id": a["ticket_id"]})
     c = custs.get(a.get("customer_id"))
     last3 = [m async for m in store.db.messages.find({"ticket_id": a["ticket_id"]}).sort("created_at", -1).limit(3)]
-    return {"action_id": str(a["_id"]), "ticket_id": str(a["ticket_id"]), "tool": a["tool"], "args": a["args"],
+    record = await registry.RUNTIME.target(a) if registry.RUNTIME else None
+    return {"action_id": str(a["_id"]), "ticket_id": str(a["ticket_id"]), "tool": a["tool"], "args": a["args"], "record": record,
             "rule_id": a["decision"]["rule_id"], "reason": a["decision"]["reason"], "customer": c["name"] if c else None,
             "tier": c["tier"] if c else None, "summary": (t.get("escalation") or {}).get("handoff_summary") or t.get("summary") or None,
             "last_messages": [{"author": m["author"], "text_en": m["text_en"]} for m in reversed(last3)],

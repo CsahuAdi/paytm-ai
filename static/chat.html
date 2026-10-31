@@ -92,6 +92,12 @@ $("f").onsubmit = async (e) => {
   } finally { $("send").disabled = false; $("t").focus(); }
 };
 
+// Pack-aware title: customer service keeps "ResolveAI support".
+fetch("/api/config").then((r) => r.json()).then((cfg) => {
+  const name = cfg.pack ? cfg.product : `${cfg.product} support`;
+  $("title").textContent = name; document.title = `${name} · Chat`;
+}).catch(() => {});
+
 // Async messages for this session: approval outcomes and replies from a human teammate.
 const es = new EventSource("/api/events?session=" + encodeURIComponent(session));
 es.onmessage = (ev) => {
