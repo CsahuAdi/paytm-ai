@@ -1,11 +1,11 @@
 # Librarian pack: configuration only, no Python. The engine supplies channels, language, LLM router,
 # verification flow, rules evaluation, approvals, takeover, audit log and idempotency.
 name: librarian
-product: Riverside Library Desk
+product: Riverside Library
 persona: You are the front-desk assistant of Riverside Public Library (a fake library used for this demo).
 policy_file: policy.md
 default_language: en-IN
-labels: {subject: member, primary: loans, money: fines}
+labels: {subject: member, primary: loans, money: fines, title: Library desk}
 
 verification:
   param: member_id
@@ -17,10 +17,11 @@ verification:
 collections:
   loans: {owner_field: member_id}
   fines: {owner_field: member_id}
-  books: {}
+  books: {text_index: [title, author, genre]}
 
-facts: [loan_id, fine_id, book_title, date, amount]
-escalation_reasons: [lost_book_dispute, harassment, distress, customer_requested_human]
+facts: [loan_id, fine_id, book_id, book_title, date, amount]
+protected_patterns: ['\bM-\d{4}\b', '\bL-\d{4}\b', '\bF-\d{4}\b', '\bB-\d{3}\b']
+escalation_reasons: [lost_book_dispute, harassment, distress]
 
 context:
   in_scope:
@@ -29,13 +30,25 @@ context:
 
 tools:
   - name: get_member_loans
+    label: Loan lookup
     description: List the member's active loans with due dates and renewals used.
     effect: read
     kind: db
     params: {}
     db: {op: find, collection: loans, filter: {status: active}, fields: [loan_id, title, due_date, renewals, reserved_by_other], limit: 10}
 
+  - name: search_catalog
+    label: Catalogue search
+    description: Search the library catalogue by title, author or genre keyword. Anyone may use it, verified or not.
+    effect: read
+    public: true
+    kind: db
+    params:
+      query: {type: string, max_length: 60, description: "Keywords, e.g. monsoon or Menon"}
+    db: {op: search, collection: books, text: "{params.query}", fields: [book_id, title, author, genre, available], limit: 5}
+
   - name: renew_loan
+    label: Loan renewal
     description: Renew one of the member's active loans for 14 more days. The member must say yes first.
     effect: write
     kind: db
@@ -58,7 +71,8 @@ tools:
     result: {loan_id: "{loan.loan_id}", title: "{loan.title}", new_due_date: "{after.due_date}", renewals_used: "{after.renewals}"}
 
   - name: waive_fine
-    description: Waive one of the member's unpaid fines. Small fines need the member's yes; larger ones need a librarian's approval.
+    label: Fine waiver
+    description: Waive one of the member's unpaid fines. Up to Rs 100 needs the member's yes; larger fines need a librarian's approval.
     effect: write
     kind: db
     params:

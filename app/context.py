@@ -123,7 +123,7 @@ async def maybe_fold(ticket_id: Any) -> None:
         return
     oldest = pending[:RAW_TAIL]
     prompt = ("Update the running summary of a customer-support conversation. Keep recent events in detail and compress "
-              "older ones harder. Always keep exact order numbers, amounts, promises made and anything awaiting confirmation. "
+              f"older ones harder. Always keep exact {'IDs' if registry.RUNTIME else 'order numbers'}, amounts, promises made and anything awaiting confirmation. "
               f"Max {SUMMARY_MAX_CHARS} characters, English.\n\nCurrent summary:\n{t.get('summary') or '(none)'}\n\n"
               "Messages to fold in (oldest first):\n" + "\n".join(_msg_line(m) for m in oldest))
     try:

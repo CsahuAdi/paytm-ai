@@ -16,6 +16,10 @@ RENEW, WAIVE = RT.tools["renew_loan"], RT.tools["waive_fine"]
 RAW = yaml.safe_load(open(f"{config.ROOT}/packs/librarian/pack.yaml"))
 
 
+def tool(raw: dict, name: str) -> dict:
+    return next(t for t in raw["tools"] if t["name"] == name)
+
+
 def session(subject: str = "M-1001") -> dict:
     return {"session": {"subject_id": subject, "verified": True}}
 
@@ -23,14 +27,17 @@ def session(subject: str = "M-1001") -> dict:
 # --- the server refuses an invalid pack ---
 
 @pytest.mark.parametrize("mutate", [
-    lambda r: r["tools"][1]["db"]["filter"].update({"$where": "1"}),  # operator key in a filter
-    lambda r: r["tools"][1]["db"]["set"].update({"$set": {"x": 1}}),  # operator key in an update
-    lambda r: r["tools"][1]["rule"]["deny_if"][0]["when"].update({"op": "eval"}),  # unknown operator
-    lambda r: r["tools"][1]["rule"]["deny_if"][0]["when"].update({"all": []}),  # leaf and group at once
-    lambda r: r["tools"][1].update({"idempotency": None}),  # write tool without an idempotency key
-    lambda r: r["tools"][1]["db"].update({"collection": "users"}),  # undeclared collection
-    lambda r: r["tools"][0].update({"name": "verify_identity"}),  # shadows an engine tool
-    lambda r: r["tools"][1].update({"public": True}),  # public write tool
+    lambda r: tool(r, "renew_loan")["db"]["filter"].update({"$where": "1"}),  # operator key in a filter
+    lambda r: tool(r, "renew_loan")["db"]["set"].update({"$set": {"x": 1}}),  # operator key in an update
+    lambda r: tool(r, "renew_loan")["rule"]["deny_if"][0]["when"].update({"op": "eval"}),  # unknown operator
+    lambda r: tool(r, "renew_loan")["rule"]["deny_if"][0]["when"].update({"all": []}),  # leaf and group at once
+    lambda r: tool(r, "renew_loan").update({"idempotency": None}),  # write tool without an idempotency key
+    lambda r: tool(r, "renew_loan")["db"].update({"collection": "users"}),  # undeclared collection
+    lambda r: tool(r, "get_member_loans").update({"name": "verify_identity"}),  # shadows an engine tool
+    lambda r: tool(r, "renew_loan").update({"public": True}),  # public write tool
+    lambda r: tool(r, "search_catalog")["db"].pop("text"),  # search without a query template
+    lambda r: r["collections"]["books"].update({"text_index": []}),  # search without a text index
+    lambda r: r["protected_patterns"].append("(unclosed"),  # invalid regex
 ])
 def test_invalid_pack_is_rejected(mutate):
     raw = copy.deepcopy(RAW)
@@ -118,3 +125,16 @@ def test_waive_tiers():
 def test_write_tool_without_tier_is_denied():
     tool = RENEW.model_copy(update={"rule": RENEW.rule.model_copy(update={"tier": None, "tiers": []})})
     assert RT.decide(tool, {"loan": loan()}).rule_id == "no_tier_declared"
+
+
+def test_search_query_cannot_carry_operators():
+    model = RT.models["search_catalog"][1]
+    assert model.model_validate({"query": "monsoon"}).query == "monsoon"
+    for bad in ["$where", {"$regex": ".*"}, "x" * 61]:
+        with pytest.raises(ValidationError):
+            model.model_validate({"query": bad})
+
+
+def test_pack_patterns_and_labels():
+    assert PACK.protected_patterns and RT.tool_labels()["renew_loan"] == "Loan renewal"
+    assert RT.tools["search_catalog"].public and RT.tools["search_catalog"].effect == "read"

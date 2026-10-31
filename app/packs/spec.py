@@ -79,7 +79,7 @@ class Param(Strict):
 
 
 class DbSpec(Strict):
-    op: Literal["find", "update"]
+    op: Literal["find", "search", "update"]  # search: MongoDB $text over the collection's text_index
     collection: str
     filter: dict[str, Any] = {}
     fields: list[str] = []
@@ -87,9 +87,12 @@ class DbSpec(Strict):
     as_: str = Field(default="target", alias="as")
     set: dict[str, Any] = {}
     inc: dict[str, int | float] = {}
+    text: str | None = None  # search only: a "{params.x}" template; the engine builds the $text query itself
 
     @model_validator(mode="after")
     def keys(self) -> "DbSpec":
+        if (self.op == "search") != bool(self.text):
+            raise ValueError("db.text is required for op search and only allowed there")
         for part in ("filter", "set", "inc"):
             check_keys(getattr(self, part), f"db.{part}")
         if not NAME.match(self.as_):
@@ -101,7 +104,8 @@ class ToolDef(Strict):
     name: str
     description: str
     effect: Literal["read", "write", "irreversible"]
-    kind: Literal["db"]  # spike: db only; notify/search/http/composite/plugin are designed, not built
+    kind: Literal["db"]  # db only; http/composite/plugin kinds are roadmap
+    label: str | None = None  # dashboard name, e.g. "Loan renewal"
     public: bool = False  # read tools a visitor may use before verification
     params: dict[str, Param] = {}
     db: DbSpec
@@ -122,7 +126,7 @@ class ToolDef(Strict):
             if not NAME.match(p):
                 raise ValueError(f"{self.name}: bad param name {p!r}")
         if self.effect != "read":
-            if self.db.op == "find":
+            if self.db.op != "update":
                 raise ValueError(f"{self.name}: a write tool must use op update")
             if not self.idempotency:
                 raise ValueError(f"{self.name}: write tools need an idempotency key template")
@@ -137,6 +141,11 @@ class Verification(Strict):
     lookup: dict[str, str]  # {collection, field[, subject_ref]}
     factors: dict[Literal["text", "voice"], Literal["email", "phone_last4"]]
     factor_description: str
+
+
+class Collection(Strict):
+    owner_field: str | None = None  # personal entity: the engine scopes every query to the verified subject
+    text_index: list[str] = []  # fields for search_* tools (MongoDB text index)
 
 
 class InScope(Strict):
@@ -154,8 +163,9 @@ class Pack(Strict):
     default_language: str = "en-IN"
     labels: dict[str, str] = {}
     verification: Verification
-    collections: dict[str, dict[str, str]]
+    collections: dict[str, Collection]
     facts: list[str]
+    protected_patterns: list[str] = []  # IDs kept verbatim through translation (masked like order numbers)
     escalation_reasons: list[str]
     context: dict[str, list[InScope]] = {}
     tools: list[ToolDef]
@@ -166,9 +176,22 @@ class Pack(Strict):
         names = [t.name for t in self.tools]
         if len(set(names)) != len(names) or ENGINE_TOOLS & set(names):
             raise ValueError("tool names must be unique and must not shadow engine tools")
-        for c in self.collections:
+        for c, spec in self.collections.items():
             if not NAME.match(c):
                 raise ValueError(f"bad collection name {c!r}")
+            for f in [spec.owner_field or "", *spec.text_index]:
+                if f and not KEY.match(f):
+                    raise ValueError(f"{c}: bad field name {f!r}")
+        for pattern in self.protected_patterns:
+            if len(pattern) > 120:
+                raise ValueError("protected pattern too long")
+            try:
+                re.compile(pattern)
+            except re.error as e:
+                raise ValueError(f"protected pattern {pattern!r}: {e}") from e
+        for t in self.tools:
+            if t.db.op == "search" and not self.collections[t.db.collection].text_index:
+                raise ValueError(f"{t.name}: search needs collections.{t.db.collection}.text_index")
         for t in self.tools:
             if t.db.collection not in self.collections:
                 raise ValueError(f"{t.name}: collection {t.db.collection} is not declared under collections")

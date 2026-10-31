@@ -8,7 +8,7 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from pymongo import ReturnDocument
 
-from app import config, core, events, tickets
+from app import config, core, events, registry, tickets
 from app import db as store
 from app.db import jsonable, now
 from app.tools import run_action
@@ -41,7 +41,13 @@ async def _customers(ids: list[Any]) -> dict[Any, dict[str, Any]]:
 
 @router.get("/config")
 async def ui_config() -> dict:
-    return {"product": config.PRODUCT_NAME, "humans": config.HUMAN_AGENTS, "languages": config.LANGUAGES}
+    rt = registry.RUNTIME
+    labels = {"subject": "customer", "primary": "orders", "money": "refunds", "title": "Support desk"}
+    if rt is None:
+        return {"product": config.PRODUCT_NAME, "humans": config.HUMAN_AGENTS, "languages": config.LANGUAGES,
+                "pack": None, "labels": labels, "tool_labels": {}}
+    return {"product": rt.pack.product, "humans": config.HUMAN_AGENTS, "languages": config.LANGUAGES, "pack": rt.pack.name,
+            "labels": labels | {"title": "Desk"} | rt.pack.labels, "tool_labels": rt.tool_labels()}
 
 
 @router.get("/tickets")
@@ -71,10 +77,11 @@ async def ticket_detail(ticket_id: str) -> dict:
     acts = [a async for a in store.db.actions.find({"ticket_id": t["_id"]})]
     timeline = sorted([{"type": "message", **jsonable(m)} for m in msgs] + [{"type": "action", **jsonable(a)} for a in acts],
                       key=lambda x: x["created_at"])
-    orders = [o async for o in store.db.orders.find({"customer_id": c["_id"]})] if c else []
+    orders = [o async for o in store.db.orders.find({"customer_id": c["_id"]})] if c and not registry.RUNTIME else []
     return {"ticket": jsonable(t), "customer": jsonable({k: v for k, v in (c or {}).items() if k != "phone"}) if c else None,
             "orders": [{"order_number": o["order_number"], "status": o["status"], "total": o["total"],
                         "refund_total": o.get("refund_total", 0)} for o in orders],
+            "records": await registry.RUNTIME.records(c) if registry.RUNTIME else [],
             "timeline": timeline}
 
 
@@ -109,6 +116,9 @@ def _outcome_text(action: dict[str, Any], result: dict[str, Any]) -> str:
     args = action["args"]
     if result.get("blocked"):
         return f"A teammate reviewed your request, but it can't be completed: {result.get('reason', 'it is not allowed by our policy')}."
+    if registry.RUNTIME and action["tool"] in registry.RUNTIME.tools:
+        label = registry.RUNTIME.tool_labels()[action["tool"]].lower()
+        return f"Good news: a staff member approved your {label} request. It has been processed."
     if action["tool"] == "issue_refund":
         return f"Good news: a teammate approved your refund of Rs {args['amount']:,} for order {args['order_number']}. It has been processed."
     return f"A teammate approved your request for order {args.get('order_number', '')}. It has been processed."

@@ -19,6 +19,8 @@ PACK = env("PACK")  # unset: customer service; else packs/<PACK>/ (config-only d
 
 MONGO_URI = env("MONGO_URI", "mongodb://localhost:27017")
 MONGO_DB = env("MONGO_DB", "resolveai")
+if PACK:  # a pack always gets its own database, so a pack reset can never touch the customer-service data
+    MONGO_DB = env("PACK_MONGO_DB") or f"{MONGO_DB}_{PACK}"
 
 AUTO_REFUND_LIMIT_INR = int(env("AUTO_REFUND_LIMIT_INR", "2000"))
 MAX_IDENTITY_ATTEMPTS = 3

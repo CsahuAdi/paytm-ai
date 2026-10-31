@@ -92,7 +92,7 @@ class Runtime:
 
     def scoped_filter(self, collection: str, template: dict[str, Any], scopes: dict[str, Any]) -> dict[str, Any]:
         f = expr.fill(template, scopes)
-        owner = self.pack.collections[collection].get("owner_field")
+        owner = self.pack.collections[collection].owner_field
         if owner:  # personal entity: always the verified subject's own records, regardless of the template
             f[owner] = scopes["session"]["subject_id"]
         return f
@@ -123,8 +123,10 @@ class Runtime:
         scopes = self.scopes(ctx, params)
         if tool.effect == "read":
             projection = {f: 1 for f in tool.db.fields} | {"_id": 0}
-            docs = [d async for d in store.db[tool.db.collection].find(
-                self.scoped_filter(tool.db.collection, tool.db.filter, scopes), projection).limit(tool.db.limit)]
+            query = self.scoped_filter(tool.db.collection, tool.db.filter, scopes)
+            if tool.db.op == "search":  # the only operator built from user input, and the engine builds it
+                query["$text"] = {"$search": str(expr.fill(tool.db.text, scopes) or "")[:100]}
+            docs = [d async for d in store.db[tool.db.collection].find(query, projection).limit(tool.db.limit)]
             await record(ctx, name, params, Decision("allow", "read", "Allowed"), "executed", {"count": len(docs)})
             return {"results": jsonable(docs)}
         target = await store.db[tool.db.collection].find_one(self.scoped_filter(tool.db.collection, tool.db.filter, scopes))
@@ -239,7 +241,29 @@ class Runtime:
                 self.scoped_filter(s.collection, s.filter, scopes), {f: 1 for f in s.fields} | {"_id": 0}).limit(s.limit)])
         return f"# 4. {self.pack.labels.get('primary', 'Records').title()} in scope\n" + json.dumps(out, default=str)
 
-    # ---------- seed ----------
+    # ---------- seed and indexes ----------
+
+    async def ensure_indexes(self) -> None:
+        for name, spec in self.pack.collections.items():
+            if spec.text_index:
+                await store.db[name].create_index([(f, "text") for f in spec.text_index], name=f"{name}_text")
+            if spec.owner_field:
+                await store.db[name].create_index(spec.owner_field)
+
+    def tool_labels(self) -> dict[str, str]:
+        return {t.name: t.label or t.name.replace("_", " ").capitalize() for t in self.pack.tools}
+
+    async def records(self, customer: dict[str, Any] | None) -> list[dict[str, Any]]:
+        """Dashboard records panel: the in-scope collections for a verified subject."""
+        if not customer:
+            return []
+        scopes = {"params": {}, "session": {"subject_id": customer.get(self.pack.verification.lookup["field"])}}
+        out = []
+        for s in self.pack.context.get("in_scope", []):
+            items = [d async for d in store.db[s.collection].find(
+                self.scoped_filter(s.collection, s.filter, scopes), {f: 1 for f in s.fields} | {"_id": 0}).limit(s.limit)]
+            out.append({"collection": s.collection, "items": jsonable(items)})
+        return out
 
     async def reset(self) -> dict[str, int]:
         with open(f"{config.ROOT}/packs/{self.pack.name}/seed.json") as f:
@@ -247,6 +271,7 @@ class Runtime:
         for name in {*store.COLLECTIONS, *self.pack.collections, *seed}:
             await store.db[name].delete_many({})
         await store.ensure_indexes()
+        await self.ensure_indexes()
         counts = {}
         for name, docs in seed.items():
             for d in docs:

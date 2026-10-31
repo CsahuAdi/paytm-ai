@@ -12,10 +12,18 @@ PATTERNS = [
 ]
 
 
+def patterns() -> list[str]:
+    """Customer service: PATTERNS. A domain pack: its own ID patterns plus the generic amount and date patterns."""
+    from app import registry  # lazy: registry imports the tool modules
+    if registry.RUNTIME is None:
+        return PATTERNS
+    return [*registry.RUNTIME.pack.protected_patterns, *PATTERNS[2:]]
+
+
 def protected(text: str, facts: list[str]) -> list[str]:
     """The facts the model listed plus anything matching the patterns, longest first."""
     found = {f for f in facts if f and f in text}
-    for p in PATTERNS:
+    for p in patterns():
         found.update(m.group(0) for m in re.finditer(p, text))
     return sorted(found, key=len, reverse=True)
 
