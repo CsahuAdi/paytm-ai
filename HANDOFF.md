@@ -41,7 +41,7 @@ python scripts/run_suite.py --core --base http://localhost:8000      # CS core, 
 PACK=kirana SUITE_PACE_S=1 python scripts/run_suite.py --base http://localhost:8001 --area kirana        # 22 rule cases, NO model calls
 PACK=kirana SUITE_PACE_S=30 python scripts/run_suite.py --base http://localhost:8001 --area kirana-llm   # 6 conversations
 PACK=librarian python scripts/run_suite.py --base http://localhost:8005                                  # 14 cases
-python scripts/rehearse.py [kirana|librarian|both]           # walks the two demo beats through the APIs and checks each outcome (about 10 turns)
+python scripts/rehearse.py [cs|kirana|librarian|both]        # walks demo beats through the APIs and checks each outcome (cs = damaged item + same customer by email, about 4 turns; each pack about 5 turns)
 ```
 - The suite resets the instance's database before each case (`/debug/reset`, DEBUG=1) and writes `docs/results*.md`; **do not run two suites against the same results file at once** (lost update). After running the CS suite against 8000, `git checkout docs/results.md` to keep the committed full-run report. **Running a suite or `rehearse.py` against 8001/8005 resets that demo instance's data**: run `reset_demo.py --pack ...` afterwards.
 - **For any future change to customer-service code,** run the core subset against a throwaway instance (`MONGO_DB=resolveai_gate PORT=8002 scripts/server.sh start`) and require 0 policy violations.
@@ -55,7 +55,7 @@ Order: 3.5-flash-lite, **Gemma 4 26B**, 3.1-flash-lite, 3.6-flash, Groq gpt-oss-
 ## 6. What is left (needs the user)
 
 1. **Rehearse** `docs/DEMO.md` in the browser: customer service beats 1-8 on 8000, librarian beat 7a at `http://localhost:8005`, kirana beat 7b at `http://localhost:8001` and `http://localhost:8001/paytm` (about 10 minutes in total; trim the opening and cross-channel beats if the slot is shorter). Two full rehearsals and the backup video.
-2. **Slide deck:** `docs/PPT_PROMPT.md` is a self-contained prompt for another Claude (facts bank with IDs, slide-by-slide spec, honesty rules). Capture 4 screenshots.
+2. **Record the video** with `docs/VIDEO_SCRIPT.md` (exact steps and words, about 10 minutes, with a 5-minute cut; invented customers only, so no real email shows on screen). **Slide deck:** `docs/PPT_PROMPT.md` is a self-contained prompt for another Claude (facts bank with IDs, slide-by-slide spec, honesty rules). Capture 4 screenshots.
 3. Optional: a second insight segment ("make good" after a resolved complaint) was not built.
 
 ## 7. Honesty rules (slides, README, talk)
@@ -69,4 +69,6 @@ The Paytm channel, transaction data, insights and redemption are **simulated**; 
 - The Twilio sandbox URL kept saving as the bare domain; the server accepts signed Twilio POSTs at `/` as well as `/webhooks/twilio`.
 - Seeded rows carry `seed: true` and the runner ignores them. CS `reset_demo` maps the user's real email and phone (from `.env`) onto the demo customer Priya; the suite uses `?fake=1`.
 - Insights run on the button only; `issue_coupon` is ungranted at start by design. The Hindi-speaking kirana customer (C-102) gets English replies flagged `translation_failed` until Sarvam has credits; approve the English-speaking customer's insight (Imran) in the demo.
+- **Seed rules:** at most one seeded ticket per customer inside the last 30 days (a third contact in 30 days escalates by rule); seeded resolution text feeds the model's context, so keep it neutral (a resolution saying "refund blocked" made the model refuse the Rs 50,000 refund itself instead of proposing it, so nothing was logged). Seed documents link with `"@oid:name"`; dates are `"@days_ago:N"`.
+- **Model behaviour to expect in the demo:** about 30 s between customer messages; a turn can still fail on every lane (Google-side errors, Groq and OpenRouter out for the day) and the system answers "a teammate will follow up": wait and resend the same text. Handoff summaries need the light model (3.1-flash-lite, then Groq/OpenRouter); if it is down the banner says the summary is being written. The two Gemini lanes that our stale local meter shows as used up (3.5-flash-lite, 3.6-flash) would add capacity if the user confirms the current key is meant to be used: reset their counters in `data/lane_usage.json`.
 - Debug-only endpoints (`/debug/*`) need `DEBUG=1` in `.env`; remove it for a public deployment.
