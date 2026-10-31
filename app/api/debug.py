@@ -38,11 +38,12 @@ class Fault(BaseModel):
 @router.post("/debug/fault")
 async def debug_fault(f: Fault) -> dict:
     _require_debug()
-    lane = llm_router.find(f.lane)
-    if lane is None:
+    lanes = [*llm_router.agent, *llm_router.light] if f.lane == "*" else [llm_router.find(f.lane)]
+    if None in lanes:
         raise HTTPException(404, f"no lane {f.lane}")
-    lane.fault_count, lane.fault_after = f.count, f.after
-    return {"lane": lane.name, "fault_count": f.count, "fault_after": f.after}
+    for lane in lanes:
+        lane.fault_count, lane.fault_after = f.count, f.after
+    return {"lanes": [lane.name for lane in lanes], "fault_count": f.count, "fault_after": f.after}
 
 
 @router.post("/debug/heal")

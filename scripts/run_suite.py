@@ -220,7 +220,11 @@ def report(results: list[dict[str, Any]]) -> str:
     resolvable = [r for r in results if r["resolves"]]
     esc_expected = [r for r in results if r["expects_escalation"]]
     esc_unexpected = [r for r in results if r["escalated"] and not r["expects_escalation"]]
-    acts = list(mongo.actions.find({"decided_by": {"$in": config.HUMAN_AGENTS}}))
+    notes = [n for r in results for n in r["notes"]]
+    approved = sum(n == "approve -> 200" for n in notes) + sum(n.startswith("double approve: [200") or n.endswith("200]") for n in notes if n.startswith("double"))
+    refused = sum(n == "approve -> 409" for n in notes) + sum(n.count("409") for n in notes if n.startswith("double"))
+    rejected = sum(n == "reject -> 200" for n in notes)
+    takeovers = sum(n == "takeover -> 200" for n in notes)
     lines = [f"# Test results ({time.strftime('%Y-%m-%d %H:%M')})", "",
              f"- Cases passed: **{sum(r['passed'] for r in results)}/{len(results)}**",
              f"- Resolved without a human (in-policy cases): {sum(r['passed'] and not r['escalated'] for r in resolvable)}/{len(resolvable)}",
@@ -229,7 +233,9 @@ def report(results: list[dict[str, Any]]) -> str:
              f"- Policy violations: **{sum(len(r['violations']) for r in results)}**",
              f"- Median turn latency (text): {statistics.median(lat):.2f}s (p90 {sorted(lat)[int(len(lat) * 0.9) - 1]:.2f}s, n={len(lat)})" if lat else "- No turns",
              f"- Lanes used: {dict((lane, sum(r['lanes'].count(lane) for r in results)) for lane in {x for r in results for x in r['lanes']})}",
-             f"- Human decisions in last case DB: {len(acts)}", "", "| Case | Area | Result | Detail |", "|---|---|---|---|"]
+             f"- Human approvals: {approved} approved and executed once, {rejected} rejected with a note, "
+             f"{refused} approve clicks refused (double-click or a denied action); takeovers: {takeovers}",
+             "", "| Case | Area | Result | Detail |", "|---|---|---|---|"]
     for r in results:
         detail = "; ".join(r["failures"] + r["violations"])[:180] or ""
         lines.append(f"| {r['name']} | {r['area']} | {'PASS' if r['passed'] else 'FAIL'} | {detail} |")
@@ -243,7 +249,15 @@ def main() -> None:
     p.add_argument("--area", default="")
     p.add_argument("--lang", default="en", help="en skips cases that spend Sarvam credit")
     p.add_argument("--core", action="store_true", help="per-block core subset (saves free-tier LLM quota)")
+    p.add_argument("--report-only", action="store_true", help="rebuild docs/results.md from data/results.json")
     args = p.parse_args()
+    if args.report_only:
+        with open(f"{config.ROOT}/data/results.json") as f:
+            md = report(json.load(f))
+        with open(f"{config.ROOT}/docs/results.md", "w") as f:
+            f.write(md)
+        print(md)
+        return
     cases = [c for c in CASES if (not args.only or c["name"] in args.only.split(","))
              and (not args.area or c["area"] in args.area.split(","))
              and (args.lang == "all" or not c.get("sarvam"))
@@ -260,7 +274,13 @@ def main() -> None:
                 print("      ", n)
     httpx.post(f"{args.base}/debug/reset", timeout=30)
     os.makedirs(f"{config.ROOT}/data", exist_ok=True)
-    with open(f"{config.ROOT}/data/results.json", "w") as f:
+    path = f"{config.ROOT}/data/results.json"
+    if args.only and os.path.exists(path):  # a re-run of some cases updates the last full run instead of replacing it
+        with open(path) as f:
+            previous = {r["name"]: r for r in json.load(f)}
+        previous.update({r["name"]: r for r in results})
+        results = [previous[c["name"]] for c in CASES if c["name"] in previous]
+    with open(path, "w") as f:
         json.dump(results, f, indent=1)
     md = report(results)
     with open(f"{config.ROOT}/docs/results.md", "w") as f:

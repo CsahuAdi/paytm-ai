@@ -120,9 +120,7 @@ CASES = [
                {"fault": {"lane": LITE, "count": 20, "after": 1}}, say("Yes, go ahead with the refund.")],
      "expect": [("count_action", "issue_refund", "executed", 1), ("refunds", "RA-10234", 1)]},
     {"name": "all_lanes_fail", "area": "routing",
-     "steps": [{"fault": {"lane": LITE, "count": 50}}, {"fault": {"lane": "gemini:gemini-3.6-flash", "count": 50}},
-               {"fault": {"lane": "groq:openai/gpt-oss-120b", "count": 50}},
-               {"fault": {"lane": "openrouter:nvidia/nemotron-3.5-super-vl:free", "count": 50}}, say("Where is my order?")],
+     "steps": [{"fault": {"lane": "*", "count": 50}}, say("Where is my order?")],
      "expect": [("escalated", "all_lanes_failed"), ("message_from", "ai")]},
 
     # --- channels (simulated webhooks; no real messages) ---

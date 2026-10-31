@@ -17,7 +17,7 @@ Times are from session start. Each block ends demoable and is committed.
 - [ ] **5:20-6:00 Web voice**: push-to-talk Hindi + English with spoken reply (gate 6:00): built; text fallback verified; spoken path waits on Sarvam credits
 - [x] **6:00-6:30 Email**: AgentMail in/out on the same ticket as chat; go/no-go for WhatsApp (gate 6:30)
 - [x] **6:30-7:00 WhatsApp**: only if the English suite is green
-- [ ] **7:00-7:30 Tests, stress, fixes**: full suite results and metrics
+- [x] **7:00-7:30 Tests, stress, fixes**: full suite results and metrics
 - [ ] **7:30-8:00 Rehearsals + backup video**: two rehearsals, backup video, reset_demo verified
 
 Cut order when behind: WhatsApp, then email. Never cut: stress test, rules engine, approvals and takeover, Hindi, rehearsals.
