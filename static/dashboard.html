@@ -113,6 +113,7 @@
   <a href="/static/chat.html" target="_blank" id="chatlink">Customer chat ↗</a>
   <a href="/static/voice.html" target="_blank" id="voicelink">Voice ↗</a>
 </header>
+<div id="coupon-strip" class="tv-card" hidden style="margin:10px 18px 0;font-size:13px"></div>
 <div id="insights-out" class="tv-card" hidden style="margin:10px 18px 0;font-size:13px"></div>
 <main>
   <section class="col">
@@ -321,6 +322,13 @@ async function loadMeters() {
     const state = l.daily_off ? "off today" : l.cooling_s > 0 ? `cooling ${l.cooling_s}s` : "ok";
     return `<span class="lane" title="${esc(l.last_error)}"><span class="dot ${cls}"></span>${esc(l.lane.split(":")[1])} <b>${l.today}${l.daily_limit ? "/" + l.daily_limit : ""}</b> ${state}</span>`;
   }).join("");
+  if (FEATURES.includes("paytm_insights")) {
+    try {
+      const c = await api("/api/insights/stats");
+      $("coupon-strip").hidden = false;
+      $("coupon-strip").innerHTML = `<b>Coupons (simulated):</b> issued ${c.issued} · redeemed ${c.redeemed} · budget left ${rs(c.budget_remaining)} of ${rs(c.monthly_budget)} · revenue brought back ${rs(c.revenue_brought_back)} <span class="chip">simulated</span>`;
+    } catch { /* strip is optional */ }
+  }
   const s = m.sarvam;
   $("footer").innerHTML = `<span>LLM lanes (calls today)</span>${lanes}<span class="sep"></span>
     <span>Sarvam <b>Rs ${s.spent_inr} spent</b> · Rs ${s.left_inr} left of ${s.budget_inr}</span><span class="sep"></span>

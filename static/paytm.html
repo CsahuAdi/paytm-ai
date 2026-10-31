@@ -26,6 +26,9 @@
   form button { padding:0 18px; border:0; border-radius:10px; background:var(--me); color:#fff; cursor:pointer; }
   form button:disabled { opacity:.5; }
   .note { color:var(--warn); font-size:12px; }
+  details#pay { border-top:1px solid var(--line); padding:8px 0 0; font-size:13px; color:var(--muted); }
+  .payrow { display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin:8px 0; color:var(--ink); }
+  .payrow button { padding:5px 14px; border:0; border-radius:8px; background:var(--me); color:#fff; cursor:pointer; }
 </style>
 </head>
 <body>
@@ -36,6 +39,10 @@
     <label>You are <select id="who"></select></label>
   </header>
   <div id="log"></div>
+  <details id="pay"><summary>Pay at Sharma Kirana (simulated)</summary>
+    <div class="payrow"><label>Coupon <select id="coupon"><option value="">no coupon</option></select></label>
+      <label>Amount Rs <input id="amount" type="number" min="1" value="200" style="width:84px"></label>
+      <button type="button" id="paybtn">Pay</button></div></details>
   <form id="f"><input id="t" autocomplete="off" placeholder="Type your message…" autofocus><button id="send">Send</button></form>
 </div>
 <script>
@@ -56,7 +63,27 @@ function show(id, author, text, name) {
   add(author === "customer" ? "me" : author === "human" ? "human" : "", text, author === "human" ? `${name || "Teammate"} (human)` : "");
 }
 
+async function loadCoupons() {
+  const rows = await (await fetch("/api/paytm/coupons?phone=" + encodeURIComponent(phone))).json();
+  const usable = rows.filter((c) => c.status === "issued");
+  $("coupon").innerHTML = '<option value="">no coupon</option>' + usable.map((c) => `<option value="${c.code}">${c.code} · Rs ${c.amount} · until ${c.expires}</option>`).join("");
+  if (usable.length) $("coupon").value = usable[0].code;
+  $("pay").querySelector("summary").textContent = `Pay at Sharma Kirana (simulated)${usable.length ? ` · ${usable.length} coupon${usable.length > 1 ? "s" : ""} available` : ""}`;
+}
+$("paybtn").onclick = async () => {
+  $("paybtn").disabled = true;
+  try {
+    const r = await fetch("/api/paytm/pay", { method: "POST", headers: { "content-type": "application/json" },
+      body: JSON.stringify({ phone, amount: Number($("amount").value), coupon_code: $("coupon").value || null }) });
+    const d = await r.json();
+    if (!r.ok) add("note", d.detail || "Payment failed");
+    else add("note", `Simulated payment of Rs ${d.paid} made${d.coupon ? ` (coupon ${d.coupon} took Rs ${d.discount} off)` : ""}. Transaction ${d.txn_id}.`);
+  } catch (err) { add("note", "Could not reach the server: " + err.message); }
+  finally { $("paybtn").disabled = false; loadCoupons(); }
+};
+
 async function openThread() {
+  loadCoupons();
   $("log").innerHTML = ""; seen.clear();
   const rows = await (await fetch("/api/paytm/messages?phone=" + encodeURIComponent(phone))).json();
   rows.forEach((m) => show(m.id, m.author, m.text, m.author_name));
@@ -65,7 +92,7 @@ async function openThread() {
   es = new EventSource("/api/events?session=" + encodeURIComponent(phone));  // live: replies, approval results and merchant offers
   es.onmessage = (ev) => {
     const e = JSON.parse(ev.data);
-    if (e.kind === "message" && e.author !== "customer") setTimeout(() => show(e.message_id, e.author, e.text, e.author_name), 300);
+    if (e.kind === "message" && e.author !== "customer") { setTimeout(() => show(e.message_id, e.author, e.text, e.author_name), 300); setTimeout(loadCoupons, 600); }
   };
 }
 

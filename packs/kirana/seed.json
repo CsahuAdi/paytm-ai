@@ -244,7 +244,8 @@
    "txn_id": null,
    "created_at": "@days_ago:5",
    "expires_at": "@days_ahead:9",
-   "redeemed_at": null
+   "redeemed_at": null,
+   "seed": true
   }
  ],
  "outbox": [],

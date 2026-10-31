@@ -98,6 +98,21 @@ class Runner:
         elif "set" in s:  # {"set": [collection, filter, fields]}: edit seed data mid-test
             coll, flt, fields = s["set"]
             self.http.post("/debug/set", json={"collection": coll, "filter": flt, "set": fields}).raise_for_status()
+        elif "pay" in s:  # {"pay": {customer_id, amount, coupon: "latest"|None, coupon_owner?}, "expect_code": n}: simulated payment at the store
+            spec = s["pay"]
+            cust = mongo.customers.find_one({"customer_id": spec["customer_id"]})
+            code = None
+            if spec.get("coupon") == "latest":
+                code = mongo.coupons.find_one({"customer_id": spec.get("coupon_owner", spec["customer_id"])}, sort=[("created_at", -1)])["code"]
+            r = self.http.post("/api/paytm/pay", json={"phone": cust["phone"], "amount": spec["amount"], "coupon_code": code})
+            self.notes.append(f"pay -> {r.status_code}")
+            if s.get("expect_code") and r.status_code != s["expect_code"]:
+                raise AssertionError(f"pay returned {r.status_code}, expected {s['expect_code']}: {r.text[:120]}")
+            self.last = r.json()
+        elif "get" in s:  # {"get": path}: keep the JSON for ("last", ...) checks
+            r = self.http.get(s["get"])
+            r.raise_for_status()
+            self.last = r.json()
         elif "insights" in s:  # the simulated Paytm insights feed
             r = self.http.post("/api/insights/run", json={"name": s.get("by", "Sharma")})
             r.raise_for_status()

@@ -11,6 +11,10 @@ issued 5 days ago. Merchant budget 1000, max coupon 300, bonus 20%, insight coup
 
 GRANT = {"grant": "issue_coupon", "cap": 10}
 T9001 = {"txn_id": "T-9001"}
+OPTIONS = {"tool": {"customer_id": "C-101", "tool": "get_resolution_options", "args": {"transaction_id": "T-9001"}}}
+ISSUE = {"tool": {"customer_id": "C-101", "tool": "issue_coupon", "args": {"transaction_id": "T-9001"}}}
+ISSUED = [GRANT, OPTIONS, ISSUE, {"confirm_last": True}]  # a Rs 288 coupon for C-101, ready to redeem
+PAID = {"source": "paytm_pay"}
 COMPLAINT = "Hi, I paid Rs 240 yesterday at Sharma Kirana for rice and butter but the rice packet was torn. What can you do?"
 
 
@@ -114,6 +118,24 @@ CASES = [
                tool("C-101", "issue_coupon", transaction_id="T-9001"), {"confirm_last": True},
                tool("C-102", "get_resolution_options", transaction_id="T-9011"), tool("C-102", "issue_coupon", transaction_id="T-9011")],
      "expect": [("last", "rule_id", "daily_cap"), ("count", "coupons", {"source": "complaint"}, 1), ("count_action", "issue_coupon", "executed", 1)]},
+
+    # ---------- stretch: redeem a coupon and the stats strip (simulated, no model calls) ----------
+    {"name": "kirana_redeem_closes_the_loop", "area": "kirana",
+     "steps": [*ISSUED, {"pay": {"customer_id": "C-101", "amount": 300, "coupon": "latest"}}, {"get": "/api/insights/stats"}],
+     "expect": [("count", "coupons", {"customer_id": "C-101", "status": "redeemed"}, 1), ("doc", "transactions", PAID, "discount", 288),
+                ("doc", "transactions", PAID, "amount", 12), ("last", "redeemed", 1), ("last", "issued", 1), ("last", "revenue_brought_back", 300),
+                ("last", "budget_remaining", 712), ("last", "simulated", True)]},
+    {"name": "kirana_coupon_redeems_once", "area": "kirana",
+     "steps": [*ISSUED, {"pay": {"customer_id": "C-101", "amount": 300, "coupon": "latest"}},
+               {"pay": {"customer_id": "C-101", "amount": 300, "coupon": "latest"}, "expect_code": 409}],
+     "expect": [("count", "transactions", PAID, 1), ("count", "coupons", {"status": "redeemed"}, 2 - 1)]},
+    {"name": "kirana_cannot_redeem_someone_elses_coupon", "area": "kirana",
+     "steps": [*ISSUED, {"pay": {"customer_id": "C-102", "amount": 300, "coupon": "latest", "coupon_owner": "C-101"}, "expect_code": 409}],
+     "expect": [("count", "transactions", PAID, 0), ("count", "coupons", {"customer_id": "C-101", "status": "issued"}, 1)]},
+    {"name": "kirana_expired_coupon_rejected", "area": "kirana",
+     "steps": [*ISSUED, {"set": ["coupons", {"customer_id": "C-101", "source": "complaint"}, {"expires_at": "@days_ago:1"}]},
+               {"pay": {"customer_id": "C-101", "amount": 300, "coupon": "latest"}, "expect_code": 409}],
+     "expect": [("count", "transactions", PAID, 0), ("count", "coupons", {"customer_id": "C-101", "status": "issued"}, 1)]},
 
     # ---------- conversations through the simulated Paytm channel (real tool loop) ----------
     {"name": "kirana_llm_both_options_side_by_side", "area": "kirana-llm",
