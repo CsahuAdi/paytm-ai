@@ -1,5 +1,7 @@
 # ResolveAI: build brief for Claude Code
 
+**Amendment 1 (domain packs, tool grants, admin role): see `../amendments.md`; it wins over this file and `PLAN.md` where they conflict.**
+
 Read this file first, then `PLAN.md` (the locked plan; it wins on any detail). You are building a customer-service AI teammate for an e-commerce/D2C store in **one 8-hour solo session with live judging**. The goal is a working, demoable system, not a polished codebase. "ResolveAI" is a placeholder name.
 
 Hackathon theme: *"Build AI teammates that don't just respond; they get the job done."* The system must resolve tickets end to end, act across systems under rules the model cannot override, and hand off to humans with context.
