@@ -40,8 +40,7 @@ USAGE = _load_usage()
 
 def _count_call(lane: str) -> int:
     global USAGE
-    if USAGE["day"] != _pacific_day():
-        USAGE = {"day": _pacific_day(), "calls": {}}
+    USAGE = _load_usage()  # re-read: several server instances share this file and the same free-tier quota
     USAGE["calls"][lane] = USAGE["calls"].get(lane, 0) + 1
     with open(USAGE_PATH, "w") as f:
         json.dump(USAGE, f)
@@ -132,6 +131,8 @@ class Router:
         raise LaneFailure("all_lanes_failed", detail="; ".join(errors))
 
     def status(self) -> list[dict[str, Any]]:
+        global USAGE
+        USAGE = _load_usage()
         seen, out = set(), []
         for lane in [*self.agent, *self.light]:
             if lane.name not in seen:

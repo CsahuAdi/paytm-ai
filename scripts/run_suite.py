@@ -18,10 +18,15 @@ from pymongo import MongoClient
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from app import config  # noqa: E402
-from tests.cases import CASES  # noqa: E402
+if config.PACK:  # a domain pack brings its own cases, database and result files
+    import importlib
+    CASES = importlib.import_module(f"tests.cases_{config.PACK}").CASES
+else:
+    from tests.cases import CASES  # noqa: E402
+RESULTS = f"results_{config.PACK}" if config.PACK else "results"
 
 mongo = MongoClient(config.MONGO_URI)[config.MONGO_DB]
-PACE_S = 5.0
+PACE_S = float(os.environ.get("SUITE_PACE_S", "5"))
 NOT_SEED = {"seed": {"$ne": True}}  # seeded history and the seeded queue item are not test results
 
 
@@ -166,6 +171,10 @@ class Runner:
             return None if mongo.messages.count_documents({f"meta.{key}": {"$exists": True, "$ne": None}, **NOT_SEED}) else f"no message with meta.{key}"
         if kind == "lane_used":
             return None if any(rest[0] in lane for lane in self.lanes) else f"lane {rest[0]} not used: {self.lanes}"
+        if kind == "doc":  # ("doc", collection, filter, field, expected)
+            coll, flt, field, expected = rest
+            doc = mongo[coll].find_one(flt) or {}
+            return None if doc.get(field) == expected else f"{coll} {flt} {field}={doc.get(field)!r}, expected {expected!r}"
         if kind == "lane_not_used":
             return None if all(rest[0] not in lane for lane in self.lanes) else f"lane {rest[0]} should have been skipped: {self.lanes}"
         if kind == "same_ticket_channels":
@@ -183,7 +192,13 @@ def violations() -> list[str]:
             out.append(f"{o['order_number']}: {len(refunds)} refunds")
         if sum(r["amount"] for r in refunds) > o["total"]:
             out.append(f"{o['order_number']}: refunds above total")
-    for a in mongo.actions.find({"status": "executed", "tool": {"$in": ["issue_refund", "create_reship", "cancel_order"]}}):
+    writes = ["issue_refund", "create_reship", "cancel_order"]
+    if config.PACK:
+        from app.packs.spec import load
+        writes = [t.name for t in load(config.PACK, config.ROOT).tools if t.effect != "read"]
+        for loan in mongo.loans.find({"renewals": {"$gt": 2}}):  # librarian invariant
+            out.append(f"{loan.get('loan_id')}: renewed {loan['renewals']} times")
+    for a in mongo.actions.find({"status": "executed", "tool": {"$in": writes}}):
         if a.get("customer_id") is None:
             out.append(f"{a['tool']} executed without a verified customer")
         tier = a["tier"]
@@ -253,9 +268,9 @@ def main() -> None:
     p.add_argument("--report-only", action="store_true", help="rebuild docs/results.md from data/results.json")
     args = p.parse_args()
     if args.report_only:
-        with open(f"{config.ROOT}/data/results.json") as f:
+        with open(f"{config.ROOT}/data/{RESULTS}.json") as f:
             md = report(json.load(f))
-        with open(f"{config.ROOT}/docs/results.md", "w") as f:
+        with open(f"{config.ROOT}/docs/{RESULTS}.md", "w") as f:
             f.write(md)
         print(md)
         return
@@ -275,7 +290,7 @@ def main() -> None:
                 print("      ", n)
     httpx.post(f"{args.base}/debug/reset", timeout=30)
     os.makedirs(f"{config.ROOT}/data", exist_ok=True)
-    path = f"{config.ROOT}/data/results.json"
+    path = f"{config.ROOT}/data/{RESULTS}.json"
     if os.path.exists(path):  # partial runs update the saved per-case results instead of replacing them
         with open(path) as f:
             previous = {r["name"]: r for r in json.load(f)}
@@ -284,7 +299,7 @@ def main() -> None:
     with open(path, "w") as f:
         json.dump(results, f, indent=1)
     md = report(results)
-    with open(f"{config.ROOT}/docs/results.md", "w") as f:
+    with open(f"{config.ROOT}/docs/{RESULTS}.md", "w") as f:
         f.write(md)
     print(md)
 
