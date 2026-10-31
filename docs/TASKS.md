@@ -15,8 +15,8 @@ Times are from session start. Each block ends demoable and is committed.
 - [x] **3:40-4:20 Approvals + takeover**: approve, reject, double-click, takeover, hand back via API (gate 4:20)
 - [x] **4:20-5:20 Dashboard**: tickets, badges, timeline, queue, takeover panel, footer meters; text demo live (gate 5:20)
 - [ ] **5:20-6:00 Web voice**: push-to-talk Hindi + English with spoken reply (gate 6:00): built; text fallback verified; spoken path waits on Sarvam credits
-- [ ] **6:00-6:30 Email**: AgentMail in/out on the same ticket as chat; go/no-go for WhatsApp (gate 6:30)
-- [ ] **6:30-7:00 WhatsApp**: only if the English suite is green
+- [x] **6:00-6:30 Email**: AgentMail in/out on the same ticket as chat; go/no-go for WhatsApp (gate 6:30)
+- [x] **6:30-7:00 WhatsApp**: only if the English suite is green
 - [ ] **7:00-7:30 Tests, stress, fixes**: full suite results and metrics
 - [ ] **7:30-8:00 Rehearsals + backup video**: two rehearsals, backup video, reset_demo verified
 

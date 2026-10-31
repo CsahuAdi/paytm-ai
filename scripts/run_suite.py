@@ -62,6 +62,18 @@ class Runner:
             self.ticket_id = d.get("ticket_id") or self.ticket_id
             self.lanes.append((d.get("meta") or {}).get("lane") or "none")
             self.notes.append(f"> {s['say'][:60]} | < {(d.get('reply_en') or d.get('meta', {}).get('mode') or '')[:110]}")
+        elif "voice" in s:
+            time.sleep(PACE_S)
+            t = time.perf_counter()
+            with open(f"{config.ROOT}/{s['voice']}", "rb") as f:
+                r = self.http.post("/api/voice", data={"session_id": self.session, "language": s.get("language", "auto"), "seconds": "5"},
+                                   files={"audio": ("voice.wav", f, "audio/wav")})
+            d = r.json()
+            self.latencies.append(time.perf_counter() - t)
+            self.lanes.append(d.get("lane") or "none")
+            self.notes.append(f"voice heard={d.get('transcript')!r} reply={str(d.get('reply'))[:80]!r} note={d.get('note')}")
+            t2 = mongo.tickets.find_one({"identity_id": {"$exists": True}}, sort=[("updated_at", -1)])
+            self.ticket_id = str(t2["_id"]) if t2 else self.ticket_id
         elif "fault" in s:
             self.http.post("/debug/fault", json=s["fault"]).raise_for_status()
         elif "approve" in s or "reject" in s:
