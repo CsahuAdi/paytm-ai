@@ -22,6 +22,9 @@ async def voice(session_id: str = Form(...), language: str = Form("auto"), secon
     transcript, detected, probability = text.strip(), pinned, None
     if audio is not None and not transcript:
         data = await audio.read()
+        if config.DEBUG:  # keep the last browser recording to re-test STT offline
+            with open(f"{config.ROOT}/data/last_voice.webm", "wb") as f:
+                f.write(data)
         try:
             transcript, detected, probability = await sarvam.transcribe(data, audio.filename or "voice.webm", pinned,
                                                                         seconds=min(seconds, MAX_SECONDS))

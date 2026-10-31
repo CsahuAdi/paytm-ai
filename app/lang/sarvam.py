@@ -16,6 +16,12 @@ class SarvamUnavailable(Exception):
     """Budget stop, 402 or any API failure: callers fall back to English."""
 
 
+def _why(what: str, e: Exception) -> SarvamUnavailable:
+    body = getattr(e, "body", None)
+    msg = (body or {}).get("error", {}).get("message") if isinstance(body, dict) else None
+    return SarvamUnavailable(f"{what}: {getattr(e, 'status_code', '')} {msg or str(e)[:120]}".strip())
+
+
 def _guard() -> None:
     if not sarvam_meter.allowed(demo=config.DEMO_MODE):
         raise SarvamUnavailable(f"Sarvam budget stop (Rs {sarvam_meter.left():.2f} left)")
@@ -27,7 +33,7 @@ async def identify(text: str) -> tuple[str, str]:
     try:
         r = await _client.text.identify_language(input=text[:1000])
     except Exception as e:  # noqa: BLE001
-        raise SarvamUnavailable(f"text-lid: {e}") from e
+        raise _why("text-lid", e) from e
     sarvam_meter.add("lid_char", len(text[:1000]))
     return r.language_code or "", r.script_code or ""
 
@@ -59,7 +65,7 @@ async def translate(text: str, source: str, target: str, output_script: str | No
             r = await _client.text.translate(input=part, source_language_code=source, target_language_code=target,
                                              model=config.SARVAM_TRANSLATE_MODEL, mode="formal", numerals_format="international", **kw)
         except Exception as e:  # noqa: BLE001
-            raise SarvamUnavailable(f"translate: {e}") from e
+            raise _why("translate", e) from e
         sarvam_meter.add("translate_char", len(part))
         out.append(r.translated_text)
     return " ".join(out)
@@ -72,7 +78,7 @@ async def transcribe(audio: bytes, filename: str, language: str | None = None, s
         r = await _client.speech_to_text.transcribe(file=(filename, audio), model=config.SARVAM_STT_MODEL,
                                                     language_code=language or "unknown", mode="transcribe")
     except Exception as e:  # noqa: BLE001
-        raise SarvamUnavailable(f"stt: {e}") from e
+        raise _why("stt", e) from e
     sarvam_meter.add("stt_second", seconds)
     return r.transcript or "", r.language_code or "", r.language_probability
 
@@ -86,6 +92,6 @@ async def speak(text: str, language: str) -> bytes | None:
     try:
         r = await _client.text_to_speech.convert(text=text, language_code=language, model=config.SARVAM_TTS_MODEL, speaker=speaker)
     except Exception as e:  # noqa: BLE001
-        raise SarvamUnavailable(f"tts: {e}") from e
+        raise _why("tts", e) from e
     sarvam_meter.add("tts_char", len(text))
     return base64.b64decode("".join(r.audios))
