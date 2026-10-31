@@ -1,5 +1,6 @@
 """Settings read once from .env. Everything tunable lives here."""
 import os
+import re
 
 from dotenv import load_dotenv
 
@@ -48,8 +49,8 @@ AGENTMAIL_INBOX_ID = env("AGENTMAIL_INBOX_ID")
 AGENTMAIL_WEBHOOK_SECRET = env("AGENTMAIL_WEBHOOK_SECRET")
 
 PUBLIC_BASE_URL = env("PUBLIC_BASE_URL").rstrip("/")
-DEMO_CUSTOMER_EMAIL = env("DEMO_CUSTOMER_EMAIL")
-DEMO_CUSTOMER_PHONE = env("DEMO_CUSTOMER_PHONE")
+DEMO_CUSTOMER_EMAIL = env("DEMO_CUSTOMER_EMAIL").lower()
+DEMO_CUSTOMER_PHONE = re.sub(r"[^\d+]", "", env("DEMO_CUSTOMER_PHONE"))  # E.164, no spaces
 
 # The 11 supported languages (mayura:v1). Anything else gets an English reply.
 LANGUAGES = {

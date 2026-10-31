@@ -32,11 +32,11 @@ def _order(number: str, customer_id: ObjectId, status: str, items: list[tuple[st
     }
 
 
-def build() -> dict[str, list[dict]]:
+def build(demo_contacts: bool = True) -> dict[str, list[dict]]:
     priya, rohan, arjun, kavya, meera = (ObjectId() for _ in range(5))
     customers = [
-        {"_id": priya, "name": "Priya Sharma", "email": config.DEMO_CUSTOMER_EMAIL or "priya.sharma@example.com",
-         "phone": config.DEMO_CUSTOMER_PHONE or "+919800000101", "language": "hi-IN", "tier": "standard"},
+        {"_id": priya, "name": "Priya Sharma", "email": (demo_contacts and config.DEMO_CUSTOMER_EMAIL) or "priya.sharma@example.com",
+         "phone": (demo_contacts and config.DEMO_CUSTOMER_PHONE) or "+919800000101", "language": "hi-IN", "tier": "standard"},
         {"_id": rohan, "name": "Rohan Verma", "email": "rohan.verma@example.com", "phone": "+919800000102",
          "language": "en-IN", "tier": "standard"},
         {"_id": arjun, "name": "Arjun Mehta", "email": "arjun.mehta@example.com", "phone": "+919800000103",
@@ -87,12 +87,12 @@ def build() -> dict[str, list[dict]]:
     return {"customers": customers, "orders": orders, "refunds": refunds, "tickets": tickets}
 
 
-async def reset() -> dict[str, int]:
+async def reset(demo_contacts: bool = True) -> dict[str, int]:
     for name in COLLECTIONS:
         await store.db[name].delete_many({})
     await store.ensure_indexes()
     counts = {}
-    for name, docs in build().items():
+    for name, docs in build(demo_contacts).items():
         if docs:
             await store.db[name].insert_many(docs)
         counts[name] = len(docs)

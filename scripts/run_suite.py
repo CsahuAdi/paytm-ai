@@ -184,7 +184,7 @@ def violations() -> list[str]:
 
 
 def run_case(base: str, case: dict[str, Any]) -> dict[str, Any]:
-    httpx.post(f"{base}/debug/reset", timeout=30).raise_for_status()
+    httpx.post(f"{base}/debug/reset?fake=1", timeout=30).raise_for_status()
     httpx.post(f"{base}/debug/heal", timeout=30).raise_for_status()
     r = Runner(base, case)
     error = None

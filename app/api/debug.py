@@ -21,11 +21,12 @@ def _require_debug() -> None:
 
 
 @router.post("/debug/reset")
-async def debug_reset() -> dict:
+async def debug_reset(fake: bool = False) -> dict:
+    """fake=1 keeps the fixture contacts (tests); the default maps the demo customer to DEMO_CUSTOMER_* from .env."""
     _require_debug()
     for lane in [*llm_router.agent, *llm_router.light]:
         lane.fault_count = lane.fault_after = 0
-    return await reset()
+    return await reset(demo_contacts=not fake)
 
 
 class Fault(BaseModel):
