@@ -18,15 +18,20 @@ collections:
   loans: {owner_field: member_id}
   fines: {owner_field: member_id}
   books: {text_index: [title, author, genre]}
+  study_rooms: {}
+  bookings: {owner_field: member_id}
 
 facts: [loan_id, fine_id, book_id, book_title, date, amount]
-protected_patterns: ['\bM-\d{4}\b', '\bL-\d{4}\b', '\bF-\d{4}\b', '\bB-\d{3}\b']
+protected_patterns: ['\bM-\d{4}\b', '\bL-\d{4}\b', '\bF-\d{4}\b', '\bB-\d{3}\b', '\bBK-\d{4}\b', '\bSR-[A-Z]\b']
+plugins: [book_slot]  # developer plugin; an admin must grant it in the Tools tab
 escalation_reasons: [lost_book_dispute, harassment, distress]
 
 context:
   in_scope:
     - {collection: loans, filter: {status: active}, fields: [loan_id, title, due_date, renewals, reserved_by_other], limit: 5}
     - {collection: fines, filter: {status: unpaid}, fields: [fine_id, amount, reason], limit: 5}
+    - {collection: study_rooms, filter: {}, fields: [room_id, name, capacity], limit: 5}
+    - {collection: bookings, filter: {status: booked}, fields: [booking_id, room_id, start, end], limit: 5}
 
 tools:
   - name: get_member_loans

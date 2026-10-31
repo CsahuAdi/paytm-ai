@@ -1,54 +1,424 @@
 {
-  "customers": [
-    {"member_id": "M-1001", "name": "आशा राव", "name_latin": "Asha Rao", "email": "asha.rao@example.com", "phone": "+919800000401", "language": "hi-IN", "tier": "standard", "address": "12, गुलमोहर लेन, पुणे"},
-    {"member_id": "M-1002", "name": "Dev Malik", "email": "dev.malik@example.com", "phone": "+919800000402", "language": "en-IN", "tier": "standard"},
-    {"member_id": "M-1003", "name": "Nisha Pillai", "email": "nisha.pillai@example.com", "phone": "+919800000403", "language": "en-IN", "tier": "standard"},
-    {"member_id": "M-1004", "name": "Kabir Sethi", "email": "kabir.sethi@example.com", "phone": "+919800000404", "language": "en-IN", "tier": "standard"},
-    {"member_id": "M-1005", "name": "Fatima Sheikh", "email": "fatima.sheikh@example.com", "phone": "+919800000405", "language": "en-IN", "tier": "standard"},
-    {"member_id": "M-1006", "name": "Joseph D'Souza", "email": "joseph.dsouza@example.com", "phone": "+919800000406", "language": "en-IN", "tier": "standard"},
-    {"member_id": "M-1007", "name": "Meenakshi Sundaram", "email": "meenakshi.s@example.com", "phone": "+919800000407", "language": "en-IN", "tier": "standard"},
-    {"member_id": "M-1008", "name": "Harpreet Gill", "email": "harpreet.gill@example.com", "phone": "+919800000408", "language": "en-IN", "tier": "standard"}
-  ],
-  "books": [
-    {"book_id": "B-301", "title": "The Monsoon Garden", "author": "R. Iyer", "genre": "fiction", "available": false},
-    {"book_id": "B-302", "title": "Stars Over Thar", "author": "K. Shekhawat", "genre": "travel", "available": false},
-    {"book_id": "B-303", "title": "Notes from Malabar", "author": "A. Menon", "genre": "history", "available": false},
-    {"book_id": "B-304", "title": "A Short History of Tea", "author": "P. Das", "genre": "history", "available": false},
-    {"book_id": "B-305", "title": "The Clockmaker of Kochi", "author": "S. Varghese", "genre": "fiction", "available": false},
-    {"book_id": "B-306", "title": "गाँव की धूप", "author": "मीरा तिवारी", "genre": "hindi fiction", "available": true},
-    {"book_id": "B-307", "title": "शहर के रंग", "author": "अमित जोशी", "genre": "hindi poetry", "available": true},
-    {"book_id": "B-308", "title": "Rivers of the Deccan", "author": "N. Kulkarni", "genre": "geography", "available": true},
-    {"book_id": "B-309", "title": "Cooking with Millets", "author": "L. Reddy", "genre": "cookery", "available": true},
-    {"book_id": "B-310", "title": "The Quiet Engineer", "author": "V. Bhatt", "genre": "biography", "available": false},
-    {"book_id": "B-311", "title": "Monsoon Birds of India", "author": "R. Iyer", "genre": "nature", "available": true},
-    {"book_id": "B-312", "title": "Learning Python Gently", "author": "D. Kapoor", "genre": "computing", "available": true},
-    {"book_id": "B-313", "title": "The Lost Kingdom of Vijaya", "author": "A. Menon", "genre": "history", "available": true},
-    {"book_id": "B-314", "title": "Small Habits, Big Days", "author": "T. Ahuja", "genre": "self-help", "available": false},
-    {"book_id": "B-315", "title": "Chess for Young Minds", "author": "G. Anand", "genre": "games", "available": true},
-    {"book_id": "B-316", "title": "Desert Songs", "author": "K. Shekhawat", "genre": "poetry", "available": true},
-    {"book_id": "B-317", "title": "The Spice Route", "author": "P. Das", "genre": "history", "available": true},
-    {"book_id": "B-318", "title": "Gardening on a Balcony", "author": "S. Rao", "genre": "home", "available": true},
-    {"book_id": "B-319", "title": "Midnight at the Station", "author": "J. Fernandes", "genre": "mystery", "available": false},
-    {"book_id": "B-320", "title": "Stories for Bedtime", "author": "M. Tiwari", "genre": "children", "available": true},
-    {"book_id": "B-321", "title": "The Weaver's Daughter", "author": "S. Varghese", "genre": "fiction", "available": true},
-    {"book_id": "B-322", "title": "Astronomy for Beginners", "author": "N. Kulkarni", "genre": "science", "available": true},
-    {"book_id": "B-323", "title": "Mountain Trails of Sikkim", "author": "D. Lepcha", "genre": "travel", "available": true},
-    {"book_id": "B-324", "title": "Mystery of the Blue Door", "author": "J. Fernandes", "genre": "mystery", "available": true},
-    {"book_id": "B-325", "title": "The Art of Listening", "author": "T. Ahuja", "genre": "self-help", "available": true}
-  ],
-  "loans": [
-    {"loan_id": "L-5001", "member_id": "M-1001", "book_id": "B-301", "title": "The Monsoon Garden", "due_date": "2026-11-03", "renewals": 0, "reserved_by_other": false, "status": "active"},
-    {"loan_id": "L-5002", "member_id": "M-1001", "book_id": "B-302", "title": "Stars Over Thar", "due_date": "2026-11-01", "renewals": 2, "reserved_by_other": false, "status": "active"},
-    {"loan_id": "L-5003", "member_id": "M-1002", "book_id": "B-303", "title": "Notes from Malabar", "due_date": "2026-11-05", "renewals": 0, "reserved_by_other": true, "status": "active"},
-    {"loan_id": "L-5004", "member_id": "M-1003", "book_id": "B-304", "title": "A Short History of Tea", "due_date": "2026-10-24", "renewals": 1, "reserved_by_other": false, "status": "active"},
-    {"loan_id": "L-5005", "member_id": "M-1004", "book_id": "B-305", "title": "The Clockmaker of Kochi", "due_date": "2026-11-09", "renewals": 0, "reserved_by_other": false, "status": "active"},
-    {"loan_id": "L-5006", "member_id": "M-1005", "book_id": "B-310", "title": "The Quiet Engineer", "due_date": "2026-11-06", "renewals": 0, "reserved_by_other": false, "status": "active"},
-    {"loan_id": "L-5007", "member_id": "M-1006", "book_id": "B-314", "title": "Small Habits, Big Days", "due_date": "2026-11-08", "renewals": 1, "reserved_by_other": false, "status": "active"},
-    {"loan_id": "L-5008", "member_id": "M-1007", "book_id": "B-319", "title": "Midnight at the Station", "due_date": "2026-11-10", "renewals": 0, "reserved_by_other": false, "status": "active"}
-  ],
-  "fines": [
-    {"fine_id": "F-7001", "member_id": "M-1001", "amount": 150, "reason": "Returned 15 days late", "status": "unpaid"},
-    {"fine_id": "F-7002", "member_id": "M-1002", "amount": 60, "reason": "Returned 6 days late", "status": "unpaid"},
-    {"fine_id": "F-7003", "member_id": "M-1003", "amount": 40, "reason": "Returned 4 days late", "status": "paid"}
-  ]
+ "customers": [
+  {
+   "member_id": "M-1001",
+   "name": "आशा राव",
+   "name_latin": "Asha Rao",
+   "email": "asha.rao@example.com",
+   "phone": "+919800000401",
+   "language": "hi-IN",
+   "tier": "standard",
+   "address": "12, गुलमोहर लेन, पुणे"
+  },
+  {
+   "member_id": "M-1002",
+   "name": "Dev Malik",
+   "email": "dev.malik@example.com",
+   "phone": "+919800000402",
+   "language": "en-IN",
+   "tier": "standard"
+  },
+  {
+   "member_id": "M-1003",
+   "name": "Nisha Pillai",
+   "email": "nisha.pillai@example.com",
+   "phone": "+919800000403",
+   "language": "en-IN",
+   "tier": "standard"
+  },
+  {
+   "member_id": "M-1004",
+   "name": "Kabir Sethi",
+   "email": "kabir.sethi@example.com",
+   "phone": "+919800000404",
+   "language": "en-IN",
+   "tier": "standard"
+  },
+  {
+   "member_id": "M-1005",
+   "name": "Fatima Sheikh",
+   "email": "fatima.sheikh@example.com",
+   "phone": "+919800000405",
+   "language": "en-IN",
+   "tier": "standard"
+  },
+  {
+   "member_id": "M-1006",
+   "name": "Joseph D'Souza",
+   "email": "joseph.dsouza@example.com",
+   "phone": "+919800000406",
+   "language": "en-IN",
+   "tier": "standard"
+  },
+  {
+   "member_id": "M-1007",
+   "name": "Meenakshi Sundaram",
+   "email": "meenakshi.s@example.com",
+   "phone": "+919800000407",
+   "language": "en-IN",
+   "tier": "standard"
+  },
+  {
+   "member_id": "M-1008",
+   "name": "Harpreet Gill",
+   "email": "harpreet.gill@example.com",
+   "phone": "+919800000408",
+   "language": "en-IN",
+   "tier": "standard"
+  }
+ ],
+ "books": [
+  {
+   "book_id": "B-301",
+   "title": "The Monsoon Garden",
+   "author": "R. Iyer",
+   "genre": "fiction",
+   "available": false
+  },
+  {
+   "book_id": "B-302",
+   "title": "Stars Over Thar",
+   "author": "K. Shekhawat",
+   "genre": "travel",
+   "available": false
+  },
+  {
+   "book_id": "B-303",
+   "title": "Notes from Malabar",
+   "author": "A. Menon",
+   "genre": "history",
+   "available": false
+  },
+  {
+   "book_id": "B-304",
+   "title": "A Short History of Tea",
+   "author": "P. Das",
+   "genre": "history",
+   "available": false
+  },
+  {
+   "book_id": "B-305",
+   "title": "The Clockmaker of Kochi",
+   "author": "S. Varghese",
+   "genre": "fiction",
+   "available": false
+  },
+  {
+   "book_id": "B-306",
+   "title": "गाँव की धूप",
+   "author": "मीरा तिवारी",
+   "genre": "hindi fiction",
+   "available": true
+  },
+  {
+   "book_id": "B-307",
+   "title": "शहर के रंग",
+   "author": "अमित जोशी",
+   "genre": "hindi poetry",
+   "available": true
+  },
+  {
+   "book_id": "B-308",
+   "title": "Rivers of the Deccan",
+   "author": "N. Kulkarni",
+   "genre": "geography",
+   "available": true
+  },
+  {
+   "book_id": "B-309",
+   "title": "Cooking with Millets",
+   "author": "L. Reddy",
+   "genre": "cookery",
+   "available": true
+  },
+  {
+   "book_id": "B-310",
+   "title": "The Quiet Engineer",
+   "author": "V. Bhatt",
+   "genre": "biography",
+   "available": false
+  },
+  {
+   "book_id": "B-311",
+   "title": "Monsoon Birds of India",
+   "author": "R. Iyer",
+   "genre": "nature",
+   "available": true
+  },
+  {
+   "book_id": "B-312",
+   "title": "Learning Python Gently",
+   "author": "D. Kapoor",
+   "genre": "computing",
+   "available": true
+  },
+  {
+   "book_id": "B-313",
+   "title": "The Lost Kingdom of Vijaya",
+   "author": "A. Menon",
+   "genre": "history",
+   "available": true
+  },
+  {
+   "book_id": "B-314",
+   "title": "Small Habits, Big Days",
+   "author": "T. Ahuja",
+   "genre": "self-help",
+   "available": false
+  },
+  {
+   "book_id": "B-315",
+   "title": "Chess for Young Minds",
+   "author": "G. Anand",
+   "genre": "games",
+   "available": true
+  },
+  {
+   "book_id": "B-316",
+   "title": "Desert Songs",
+   "author": "K. Shekhawat",
+   "genre": "poetry",
+   "available": true
+  },
+  {
+   "book_id": "B-317",
+   "title": "The Spice Route",
+   "author": "P. Das",
+   "genre": "history",
+   "available": true
+  },
+  {
+   "book_id": "B-318",
+   "title": "Gardening on a Balcony",
+   "author": "S. Rao",
+   "genre": "home",
+   "available": true
+  },
+  {
+   "book_id": "B-319",
+   "title": "Midnight at the Station",
+   "author": "J. Fernandes",
+   "genre": "mystery",
+   "available": false
+  },
+  {
+   "book_id": "B-320",
+   "title": "Stories for Bedtime",
+   "author": "M. Tiwari",
+   "genre": "children",
+   "available": true
+  },
+  {
+   "book_id": "B-321",
+   "title": "The Weaver's Daughter",
+   "author": "S. Varghese",
+   "genre": "fiction",
+   "available": true
+  },
+  {
+   "book_id": "B-322",
+   "title": "Astronomy for Beginners",
+   "author": "N. Kulkarni",
+   "genre": "science",
+   "available": true
+  },
+  {
+   "book_id": "B-323",
+   "title": "Mountain Trails of Sikkim",
+   "author": "D. Lepcha",
+   "genre": "travel",
+   "available": true
+  },
+  {
+   "book_id": "B-324",
+   "title": "Mystery of the Blue Door",
+   "author": "J. Fernandes",
+   "genre": "mystery",
+   "available": true
+  },
+  {
+   "book_id": "B-325",
+   "title": "The Art of Listening",
+   "author": "T. Ahuja",
+   "genre": "self-help",
+   "available": true
+  }
+ ],
+ "loans": [
+  {
+   "loan_id": "L-5001",
+   "member_id": "M-1001",
+   "book_id": "B-301",
+   "title": "The Monsoon Garden",
+   "due_date": "2026-11-03",
+   "renewals": 0,
+   "reserved_by_other": false,
+   "status": "active"
+  },
+  {
+   "loan_id": "L-5002",
+   "member_id": "M-1001",
+   "book_id": "B-302",
+   "title": "Stars Over Thar",
+   "due_date": "2026-11-01",
+   "renewals": 2,
+   "reserved_by_other": false,
+   "status": "active"
+  },
+  {
+   "loan_id": "L-5003",
+   "member_id": "M-1002",
+   "book_id": "B-303",
+   "title": "Notes from Malabar",
+   "due_date": "2026-11-05",
+   "renewals": 0,
+   "reserved_by_other": true,
+   "status": "active"
+  },
+  {
+   "loan_id": "L-5004",
+   "member_id": "M-1003",
+   "book_id": "B-304",
+   "title": "A Short History of Tea",
+   "due_date": "2026-10-24",
+   "renewals": 1,
+   "reserved_by_other": false,
+   "status": "active"
+  },
+  {
+   "loan_id": "L-5005",
+   "member_id": "M-1004",
+   "book_id": "B-305",
+   "title": "The Clockmaker of Kochi",
+   "due_date": "2026-11-09",
+   "renewals": 0,
+   "reserved_by_other": false,
+   "status": "active"
+  },
+  {
+   "loan_id": "L-5006",
+   "member_id": "M-1005",
+   "book_id": "B-310",
+   "title": "The Quiet Engineer",
+   "due_date": "2026-11-06",
+   "renewals": 0,
+   "reserved_by_other": false,
+   "status": "active"
+  },
+  {
+   "loan_id": "L-5007",
+   "member_id": "M-1006",
+   "book_id": "B-314",
+   "title": "Small Habits, Big Days",
+   "due_date": "2026-11-08",
+   "renewals": 1,
+   "reserved_by_other": false,
+   "status": "active"
+  },
+  {
+   "loan_id": "L-5008",
+   "member_id": "M-1007",
+   "book_id": "B-319",
+   "title": "Midnight at the Station",
+   "due_date": "2026-11-10",
+   "renewals": 0,
+   "reserved_by_other": false,
+   "status": "active"
+  }
+ ],
+ "fines": [
+  {
+   "fine_id": "F-7001",
+   "member_id": "M-1001",
+   "amount": 150,
+   "reason": "Returned 15 days late",
+   "status": "unpaid"
+  },
+  {
+   "fine_id": "F-7002",
+   "member_id": "M-1002",
+   "amount": 60,
+   "reason": "Returned 6 days late",
+   "status": "unpaid"
+  },
+  {
+   "fine_id": "F-7003",
+   "member_id": "M-1003",
+   "amount": 40,
+   "reason": "Returned 4 days late",
+   "status": "paid"
+  }
+ ],
+ "study_rooms": [
+  {
+   "room_id": "SR-A",
+   "name": "Study room A",
+   "capacity": 2
+  },
+  {
+   "room_id": "SR-B",
+   "name": "Study room B",
+   "capacity": 4
+  },
+  {
+   "room_id": "SR-C",
+   "name": "Study room C",
+   "capacity": 6
+  },
+  {
+   "room_id": "SR-D",
+   "name": "Study room D (quiet)",
+   "capacity": 1
+  }
+ ],
+ "bookings": [],
+ "outbox": [],
+ "grant_audit": [],
+ "tool_grants": [
+  {
+   "pack": "librarian",
+   "tool": "get_member_loans",
+   "enabled": true,
+   "tier": "allow",
+   "max_per_day": null,
+   "granted_by": "seed",
+   "granted_at": "2026-10-31T09:00:00"
+  },
+  {
+   "pack": "librarian",
+   "tool": "search_catalog",
+   "enabled": true,
+   "tier": "allow",
+   "max_per_day": null,
+   "granted_by": "seed",
+   "granted_at": "2026-10-31T09:00:00"
+  },
+  {
+   "pack": "librarian",
+   "tool": "renew_loan",
+   "enabled": true,
+   "tier": "confirm",
+   "max_per_day": null,
+   "granted_by": "seed",
+   "granted_at": "2026-10-31T09:00:00"
+  },
+  {
+   "pack": "librarian",
+   "tool": "waive_fine",
+   "enabled": true,
+   "tier": "confirm",
+   "max_per_day": null,
+   "granted_by": "seed",
+   "granted_at": "2026-10-31T09:00:00"
+  },
+  {
+   "pack": "librarian",
+   "tool": "send_notification",
+   "enabled": true,
+   "tier": "allow",
+   "max_per_day": null,
+   "granted_by": "seed",
+   "granted_at": "2026-10-31T09:00:00"
+  }
+ ]
 }

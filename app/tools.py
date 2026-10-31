@@ -221,7 +221,8 @@ def idempotency_key(ctx: Ctx, tool: str, args: dict[str, Any]) -> str:
 async def propose(ctx: Ctx, tool: str, args: dict[str, Any]) -> dict[str, Any]:
     """issue_refund / create_reship / cancel_order / send_notification: decide, then hold or run."""
     state = await policy_state(ctx, args.get("order_number"))
-    decision = decide(tool, args, state)
+    from app import grants  # lazy: grants imports the registry, which imports this module
+    decision = await grants.adjust(tool, decide(tool, args, state))  # an admin may tighten a tier, never loosen it
     if decision.result == "deny":
         await record(ctx, tool, args, decision, "blocked")
         return {"blocked": True, "rule_id": decision.rule_id, "reason": decision.reason}
@@ -246,8 +247,13 @@ async def propose(ctx: Ctx, tool: str, args: dict[str, Any]) -> dict[str, Any]:
 async def run_action(action: dict[str, Any], approved: bool = False) -> dict[str, Any]:
     """Executor for an action already moved to `executing`. Re-checks deny rules against current data."""
     from app import registry  # lazy: registry imports this module
-    if registry.RUNTIME and action["tool"] in registry.RUNTIME.tools:
+    if registry.RUNTIME and (action["tool"] in registry.RUNTIME.tools or action["tool"] in registry.RUNTIME.plugins):
         return await registry.RUNTIME.run(action, approved=approved)
+    from app import grants
+    revoked = await grants.recheck(action, approved)
+    if revoked:  # a revoked tool, a used-up daily cap or a tightened tier blocks even a pending action
+        await finish(action, "blocked", {"rule_id": revoked.rule_id, "reason": revoked.reason}, revoked)
+        return {"blocked": True, "rule_id": revoked.rule_id, "reason": revoked.reason}
     customer = await store.db.customers.find_one({"_id": action["customer_id"]})
     ticket = await store.db.tickets.find_one({"_id": action["ticket_id"]})
     identity = {"verified": True, "attempts": 0}

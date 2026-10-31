@@ -10,7 +10,7 @@ from bson import ObjectId
 from pydantic import ValidationError
 from pymongo.errors import DuplicateKeyError
 
-from app import config, context, events, tickets
+from app import config, context, events, grants, tickets
 from app import db as store
 from app.db import now
 from app.lang import layer
@@ -18,7 +18,7 @@ from app.llm.base import LaneFailure, ToolResult
 from app.llm.router import Lane, router
 from app.policy import Decision, decide_reply
 from app.registry import TOOL_MODELS, TOOL_SPECS, check_facts, execute
-from app.tools import Ctx, ReplyToCustomer, policy_state
+from app.tools import Ctx, ReplyToCustomer, policy_state, record
 
 log = logging.getLogger("core")
 MAX_STEPS = 6
@@ -125,7 +125,7 @@ async def agent_turn(ctx: Ctx, text_en: str) -> tuple[ReplyToCustomer | None, st
 
 async def run_on_lane(lane: Lane, ctx: Ctx, text_en: str) -> ReplyToCustomer:
     system, user = await context.build(ctx, text_en)
-    session = lane.adapter.session(system, user, TOOL_SPECS)
+    session = lane.adapter.session(system, user, await grants.visible(TOOL_SPECS))  # only tools an admin has granted
     results: list[ToolResult] | None = None
     repairs = 0
     for _ in range(MAX_STEPS):
@@ -156,6 +156,9 @@ async def run_on_lane(lane: Lane, ctx: Ctx, text_en: str) -> ReplyToCustomer:
                     continue
                 reply = args
                 results.append(ToolResult(call, {"ok": True}))
+            elif gated := await grants.gate(call.name):  # not granted, or its daily cap is used up
+                await record(ctx, call.name, args.model_dump(), gated, "blocked")
+                results.append(ToolResult(call, {"blocked": True, "rule_id": gated.rule_id, "reason": gated.reason}))
             else:
                 results.append(ToolResult(call, await execute(ctx, call.name, args)))
         if reply is not None:

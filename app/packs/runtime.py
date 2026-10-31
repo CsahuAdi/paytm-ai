@@ -67,6 +67,12 @@ class Runtime:
     def __init__(self, pack: Pack) -> None:
         self.pack = pack
         self.tools: dict[str, ToolDef] = {t.name: t for t in pack.tools}
+        from plugins import load_all  # developer plugins; the pack only names the ones it may be granted
+        available = load_all()
+        unknown = [n for n in pack.plugins if n not in available]
+        if unknown:
+            raise ValueError(f"pack {pack.name} lists unknown plugins: {unknown}")
+        self.plugins = {n: available[n] for n in pack.plugins}
         v = pack.verification
         verify = create_model("VerifyIdentity", __config__=ConfigDict(extra="forbid"), **{  # type: ignore[call-overload]
             v.param: (SafeStr, Field(description=v.param_description, max_length=40)),
@@ -81,6 +87,7 @@ class Runtime:
             "verify_identity": (f"Verify who the {subject} is. The ONLY way to verify. Needs {v.param} plus the factor. "
                                 "Ask for both first; never guess them.", verify),
             **{t.name: (t.description, build_model(t.name, t.params)) for t in pack.tools},
+            **{n: (pl.description, pl.params) for n, pl in self.plugins.items()},
             "send_notification": (CS_TOOLS["send_notification"][0], SendNotification),
             "confirm_action": (CS_TOOLS["confirm_action"][0].replace("customer", subject), ConfirmAction),
             "escalate": ("Hand the conversation to a human for: " + ", ".join(pack.escalation_reasons) + ".", esc),
@@ -115,6 +122,8 @@ class Runtime:
                 await record(ctx, name, params, d, "blocked")
                 return {"blocked": True, "rule_id": d.rule_id}
             return await (confirm_action(ctx, args) if name == "confirm_action" else propose(ctx, name, params))  # type: ignore[arg-type]
+        if name in self.plugins:
+            return await self.execute_plugin(ctx, name, params)
         tool = self.tools[name]
         if not ctx.verified and not tool.public:
             d = Decision("deny", "unverified", "Identity not verified; data and action tools are blocked")
@@ -130,12 +139,27 @@ class Runtime:
             await record(ctx, name, params, Decision("allow", "read", "Allowed"), "executed", {"count": len(docs)})
             return {"results": jsonable(docs)}
         target = await store.db[tool.db.collection].find_one(self.scoped_filter(tool.db.collection, tool.db.filter, scopes))
-        decision = self.decide(tool, scopes | {tool.db.as_: target})
+        from app import grants
+        decision = await grants.adjust(name, self.decide(tool, scopes | {tool.db.as_: target}))
+        key = f"{self.pack.name}:{ctx.ticket['_id']}:{expr.fill(tool.idempotency, scopes | {tool.db.as_: target})}"
+        return await self._hold(ctx, name, params, decision, key)
+
+    async def execute_plugin(self, ctx: Ctx, name: str, params: dict[str, Any]) -> dict[str, Any]:
+        plugin = self.plugins[name]
+        if not ctx.verified:
+            d = Decision("deny", "unverified", "Identity not verified; data and action tools are blocked")
+            await record(ctx, name, params, d, "blocked")
+            return {"blocked": True, "rule_id": d.rule_id, "reason": d.reason}
+        from app import grants
+        decision = await grants.adjust(name, await plugin.check(params, ctx.customer))
+        return await self._hold(ctx, name, params, decision, f"{self.pack.name}:{ctx.ticket['_id']}:{plugin.idempotency(params)}")
+
+    async def _hold(self, ctx: Ctx, name: str, params: dict[str, Any], decision: Decision, key: str) -> dict[str, Any]:
+        """Deny, hold for a yes or a human, or run now; one idempotency key per proposal."""
         if decision.result == "deny":
             await record(ctx, name, params, decision, "blocked")
             return {"blocked": True, "rule_id": decision.rule_id, "reason": decision.reason}
         status = {"confirm": "pending_confirmation", "approve": "pending_approval", "allow": "executing"}[decision.result]
-        key = f"{self.pack.name}:{ctx.ticket['_id']}:{expr.fill(tool.idempotency, scopes | {tool.db.as_: target})}"
         try:
             action = await record(ctx, name, params, decision, status, key=key)
         except DuplicateKeyError:
@@ -169,9 +193,23 @@ class Runtime:
         return Decision(rule.tier, rule.rule_id, "Pack rule")
 
     async def run(self, action: dict[str, Any], approved: bool = False) -> dict[str, Any]:
-        """Executor for an action already moved to `executing`: re-check deny rules on fresh data, then write once."""
-        tool = self.tools[action["tool"]]
+        """Executor for an action already moved to `executing`: re-check grants and deny rules on fresh data, then write once."""
+        from app import grants
+        revoked = await grants.recheck(action, approved)
+        if revoked:  # a revoke, a daily cap or a tightened tier blocks even an action that was already pending
+            await finish(action, "blocked", {"rule_id": revoked.rule_id, "reason": revoked.reason}, revoked)
+            return {"blocked": True, "rule_id": revoked.rule_id, "reason": revoked.reason}
         customer = await store.db.customers.find_one({"_id": action["customer_id"]})
+        if action["tool"] in self.plugins:
+            plugin = self.plugins[action["tool"]]
+            again = await plugin.check(action["args"], customer)  # deny rules re-checked on fresh data (e.g. slot taken meanwhile)
+            if again.result == "deny" or (again.result == "approve" and not approved):
+                await finish(action, "blocked", {"rule_id": again.rule_id, "reason": again.reason}, again)
+                return {"blocked": True, "rule_id": again.rule_id, "reason": again.reason}
+            result = await plugin.run(action, customer)
+            await finish(action, "executed", result)
+            return {"action_id": str(action["_id"]), "status": "executed", "result": result}
+        tool = self.tools[action["tool"]]
         subject_id = customer.get(self.pack.verification.lookup["field"]) if customer else None
         scopes = {"params": action["args"], "session": {"subject_id": subject_id, "verified": customer is not None}}
         target = await store.db[tool.db.collection].find_one(self.scoped_filter(tool.db.collection, tool.db.filter, scopes))

@@ -26,7 +26,10 @@ async def debug_reset(fake: bool = False) -> dict:
     _require_debug()
     for lane in [*llm_router.agent, *llm_router.light]:
         lane.fault_count = lane.fault_after = 0
-    return await reset(demo_contacts=not fake)
+    counts = await reset(demo_contacts=not fake)
+    from app import grants
+    grants.invalidate()
+    return counts
 
 
 class Fault(BaseModel):

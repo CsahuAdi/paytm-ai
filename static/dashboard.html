@@ -11,6 +11,7 @@
     --red:#b91c1c; --red-bg:#fee2e2; --violet:#6d28d9; --violet-bg:#ede9fe; --grey-bg:#eef0f3;
   }
   * { box-sizing:border-box; }
+  [hidden] { display:none !important; }  /* author display rules must not override the hidden attribute */
   body { margin:0; font:14px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif; color:var(--ink); background:var(--bg); }
   header { display:flex; align-items:center; gap:14px; padding:10px 18px; background:var(--panel); border-bottom:1px solid var(--line); flex-wrap:wrap; }
   header h1 { font-size:17px; margin:0; }
@@ -84,6 +85,20 @@
   footer .sep { width:1px; align-self:stretch; background:#334155; }
   .toast { position:fixed; right:18px; bottom:48px; background:#111827; color:#fff; padding:9px 13px; border-radius:9px; font-size:13px; opacity:0; transition:opacity .2s; }
   .toast.show { opacity:.95; }
+  #toolsview { padding:14px 18px 70px; display:flex; flex-direction:column; gap:14px; }
+  .tv-head { display:flex; align-items:baseline; gap:12px; flex-wrap:wrap; } .tv-head h2 { margin:0; font-size:17px; }
+  #tv-note { color:var(--muted); font-size:12.5px; }
+  .tv-card { background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:12px 14px; overflow-x:auto; }
+  .tv-card h3 { margin:0 0 8px; font-size:13px; color:var(--muted); text-transform:uppercase; letter-spacing:.05em; }
+  .tv-cols { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+  #tv-table { width:100%; border-collapse:collapse; font-size:13px; }
+  #tv-table th, #tv-table td { text-align:left; padding:7px 8px; border-bottom:1px solid var(--line); vertical-align:top; }
+  #tv-table td small { color:var(--muted); display:block; max-width:380px; }
+  #tv-table input { width:64px; border:1px solid var(--line); border-radius:6px; padding:3px 6px; }
+  .tv-row { font-size:12.5px; padding:5px 0; border-bottom:1px solid var(--line); }
+  details.raw { margin-top:4px; } details.raw summary { cursor:pointer; color:var(--muted); font-size:11.5px; }
+  details.raw pre { font-size:11px; background:var(--soft); border-radius:6px; padding:6px 8px; max-height:220px; overflow:auto; white-space:pre-wrap; }
+  #toolsbtn.on { background:var(--blue); color:#fff; border-color:var(--blue); }
   @media (max-width: 1100px) { main { grid-template-columns: 1fr; height:auto; } .col { max-height:70vh; } }
 </style>
 </head>
@@ -91,6 +106,7 @@
 <header>
   <h1 id="product">ResolveAI <span>· Support desk</span></h1>
   <div class="grow"></div>
+  <button id="toolsbtn" hidden title="Admins only: which tools this teammate may use">Tools</button>
   <label>You are <select id="human"></select></label>
   <a href="/static/chat.html" target="_blank" id="chatlink">Customer chat ↗</a>
   <a href="/static/voice.html" target="_blank">Voice ↗</a>
@@ -111,6 +127,14 @@
     <div class="scroll" id="queue"></div>
   </section>
 </main>
+<section id="toolsview" hidden>
+  <div class="tv-head"><h2>Tools for this teammate</h2><span id="tv-note"></span></div>
+  <div class="tv-card"><table id="tv-table"></table></div>
+  <div class="tv-cols">
+    <div class="tv-card"><h3>Audit (who changed what)</h3><div id="tv-audit"></div></div>
+    <div class="tv-card"><h3>Outbox (emails written by tools)</h3><div id="tv-outbox"></div></div>
+  </div>
+</section>
 <footer id="footer">Loading meters…</footer>
 <div class="toast" id="toast"></div>
 <script>
@@ -146,9 +170,12 @@ async function init() {
   document.title = `${cfg.product} · ${cfg.labels.title}`;
   $("chatlink").textContent = `${cfg.labels.subject[0].toUpperCase()}${cfg.labels.subject.slice(1)} chat ↗`;
   Object.assign(TOOL, cfg.tool_labels || {});
-  $("human").innerHTML = humans.map((h) => `<option>${esc(h)}</option>`).join("");
+  ROLES = cfg.roles || {};
+  $("human").innerHTML = humans.map((h) => `<option value="${esc(h)}">${esc(h)} (${esc(ROLES[h] || "reviewer")})</option>`).join("");
   if (humans.includes(store.get("ra_human"))) $("human").value = store.get("ra_human");
-  $("human").onchange = () => store.set("ra_human", me());
+  $("human").onchange = () => { store.set("ra_human", me()); applyRole(); };
+  $("toolsbtn").onclick = () => showTools($("toolsview").hidden);
+  applyRole();
   await Promise.all([loadTickets(), loadQueue(), loadMeters()]);
   if (new URLSearchParams(location.search).has("nosse")) return;  // static screenshots only
   const es = new EventSource("/api/events");
@@ -160,7 +187,7 @@ let timer = null, dirtyTicket = false;
 function schedule(ticketId) {
   if (selected && ticketId === selected) dirtyTicket = true;
   clearTimeout(timer);
-  timer = setTimeout(() => { loadTickets(); loadQueue(); loadMeters(); if (dirtyTicket) { dirtyTicket = false; loadTicket(selected); } }, 250);
+  timer = setTimeout(() => { loadTickets(); loadQueue(); loadMeters(); if (!$("toolsview").hidden) loadTools(); if (dirtyTicket) { dirtyTicket = false; loadTicket(selected); } }, 250);
 }
 
 async function loadTickets() {
@@ -188,7 +215,9 @@ function actionLine(a) {
   return `<div class="ev action"><div class="meta"><span class="chip st-${a.status}">${a.status.replace("_", " ")}</span>
     <span>${time(a.created_at)}</span><span>${a.channel ? `<span class="chip ch-${a.channel}">${a.channel}</span>` : ""}</span></div>
     <div class="what">${esc(TOOL[a.tool] || a.tool)}${bits ? ` — ${bits}` : ""}</div>
-    <div class="why">Rule <b>${esc(d.rule_id)}</b> → ${esc(d.result)}: ${esc(d.reason)}${who}${res}</div></div>`;
+    <div class="why">Rule <b>${esc(d.rule_id)}</b> → ${esc(d.result)}: ${esc(d.reason)}${who}${res}</div>
+    <details class="raw"><summary>raw</summary><pre>${esc(JSON.stringify({ tool: a.tool, args: a.args, decision: a.decision, status: a.status,
+      result: a.result, idempotency_key: a.idempotency_key, decided_by: a.decided_by }, null, 1))}</pre></details></div>`;
 }
 
 function messageLine(m) {
@@ -284,10 +313,50 @@ async function loadMeters() {
   const s = m.sarvam;
   $("footer").innerHTML = `<span>LLM lanes (calls today)</span>${lanes}<span class="sep"></span>
     <span>Sarvam <b>Rs ${s.spent_inr} spent</b> · Rs ${s.left_inr} left of ${s.budget_inr}</span><span class="sep"></span>
-    <span>Approvals <b>${k.approved}</b> · rejections <b>${k.rejected}</b> · takeovers <b>${k.takeovers}</b> · blocked <b>${k.blocked_actions}</b>${k.median_time_to_decision_s != null ? ` · decision ${k.median_time_to_decision_s}s` : ""}</span>`;
+    <span>Approvals <b>${k.approved}</b> · rejections <b>${k.rejected}</b> · takeovers <b>${k.takeovers}</b> · blocked <b>${k.blocked_actions}</b>${k.median_time_to_decision_s != null ? ` · decision ${k.median_time_to_decision_s}s` : ""}</span>
+    <span class="sep"></span><span>Demo-level roles; real login is roadmap</span>`;
 }
 
-init().then(() => { const p = new URLSearchParams(location.search).get('t'); if (p) { selected = p; loadTickets(); loadTicket(p); } });
+// ---------- roles and the admin Tools tab ----------
+let ROLES = {};
+const TIER_ORDER = ["allow", "confirm", "approve"];
+function applyRole() {
+  const admin = ROLES[me()] === "admin";
+  $("toolsbtn").hidden = !admin;
+  if (!admin) showTools(false);
+}
+function showTools(on) {
+  $("toolsview").hidden = !on;
+  document.querySelector("main").hidden = on;
+  $("toolsbtn").classList.toggle("on", on);
+  if (on) loadTools();
+}
+async function loadTools() {
+  const d = await api("/api/tools");
+  $("tv-note").textContent = d.note;
+  $("tv-table").innerHTML = `<tr><th>Tool</th><th>Source</th><th>Effect</th><th>Loosest tier</th><th>Status</th><th>Tier</th><th>Cap/day</th><th></th></tr>` +
+    d.tools.map((t) => {
+      const g = t.grant || {};
+      const on = g.enabled === true;
+      const tiers = TIER_ORDER.slice(TIER_ORDER.indexOf(t.loosest_tier));
+      const secrets = t.secrets.map((s) => `${s.name}${s.present ? "" : " (missing)"}`).join(", ");
+      return `<tr><td><b>${esc(t.label)}</b> <code>${esc(t.name)}</code><small>${esc(t.description)}${secrets ? ` · secrets: ${esc(secrets)}` : ""}</small></td>
+        <td>${esc(t.source)}</td><td>${esc(t.effect)}</td><td>${esc(t.loosest_tier)}</td>
+        <td><span class="chip ${on ? "st-executed" : "st-blocked"}">${on ? "granted" : "not granted"}</span>${g.granted_by ? `<small>by ${esc(g.granted_by)}</small>` : ""}</td>
+        <td><select data-tier="${esc(t.name)}">${tiers.map((x) => `<option ${x === (g.tier || t.loosest_tier) ? "selected" : ""}>${x}</option>`).join("")}</select></td>
+        <td><input type="number" min="1" placeholder="none" data-cap="${esc(t.name)}" value="${g.max_per_day || ""}"></td>
+        <td><button class="ok" data-grant="${esc(t.name)}">${on ? "Update" : "Grant"}</button> ${on ? `<button class="danger" data-revoke="${esc(t.name)}">Revoke</button>` : ""}</td></tr>`;
+    }).join("");
+  $("tv-audit").innerHTML = d.audit.map((a) => `<div class="tv-row">${time(a.at)} <b>${esc(a.who)}</b> ${a.after.enabled ? "granted" : "revoked"} <code>${esc(a.tool)}</code> · tier ${esc(a.after.tier)}${a.after.max_per_day ? ` · cap ${a.after.max_per_day}/day` : ""}${a.before ? ` <small style="color:var(--muted)">(was ${a.before.enabled ? "on" : "off"}, ${esc(a.before.tier)}${a.before.max_per_day ? ", cap " + a.before.max_per_day : ""})</small>` : ""}</div>`).join("") || '<div class="empty">No changes yet.</div>';
+  $("tv-outbox").innerHTML = d.outbox.map((o) => `<div class="tv-row">${time(o.created_at)} <b>${esc(o.subject)}</b> → ${esc(o.to)} <span class="chip">${esc(o.status)}</span><div style="white-space:pre-wrap;color:var(--muted)">${esc(o.body)}</div></div>`).join("") || '<div class="empty">No emails yet.</div>';
+  document.querySelectorAll("[data-grant]").forEach((b) => b.onclick = () => {
+    const n = b.dataset.grant, cap = document.querySelector(`[data-cap="${n}"]`).value;
+    act(`/api/tools/${n}/grant`, { tier: document.querySelector(`[data-tier="${n}"]`).value, max_per_day: cap ? Number(cap) : null, clear_cap: !cap }, `${n} granted`).then(loadTools);
+  });
+  document.querySelectorAll("[data-revoke]").forEach((b) => b.onclick = () => act(`/api/tools/${b.dataset.revoke}/revoke`, {}, `${b.dataset.revoke} revoked`).then(loadTools));
+}
+
+init().then(() => { const q = new URLSearchParams(location.search), p = q.get('t'); if (p) { selected = p; loadTickets(); loadTicket(p); } if (q.has('tools') && ROLES[me()] === 'admin') showTools(true); });
 </script>
 </body>
 </html>

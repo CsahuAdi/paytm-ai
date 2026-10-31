@@ -166,6 +166,7 @@ class Pack(Strict):
     collections: dict[str, Collection]
     facts: list[str]
     protected_patterns: list[str] = []  # IDs kept verbatim through translation (masked like order numbers)
+    plugins: list[str] = []  # developer-written plugin tools this pack may be granted (see plugins/); loaded, not granted
     escalation_reasons: list[str]
     context: dict[str, list[InScope]] = {}
     tools: list[ToolDef]

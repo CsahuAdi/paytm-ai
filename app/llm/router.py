@@ -97,7 +97,13 @@ class Router:
         self.light = [Lane(f"gemini:{config.LLM_LIGHT_MODEL}"), *[by_provider[p] for p in ("groq", "openrouter") if p in by_provider]]
 
     def lanes(self, light: bool = False) -> list[Lane]:
-        return [lane for lane in (self.light if light else self.agent) if lane.healthy()]
+        pool = self.light if light else self.agent
+        healthy = [lane for lane in pool if lane.healthy()]
+        if healthy:
+            return healthy
+        # Every lane is cooling down: try them anyway, soonest cooldown first (never the ones off for the day), so one
+        # transient 5xx does not black the agent out for a whole cooldown window.
+        return sorted((lane for lane in pool if lane.daily_off_until <= time.time()), key=lambda lane: lane.cooldown_until)
 
     def find(self, name: str) -> Lane | None:
         return next((lane for lane in [*self.agent, *self.light] if lane.name == name), None)

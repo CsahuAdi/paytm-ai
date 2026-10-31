@@ -8,7 +8,7 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from pymongo import ReturnDocument
 
-from app import config, core, events, registry, tickets
+from app import config, core, events, grants, registry, tickets
 from app import db as store
 from app.db import jsonable, now
 from app.tools import run_action
@@ -30,8 +30,15 @@ def _oid(value: str) -> ObjectId:
 
 
 def _human(name: str) -> str:
+    """Reviewers and admins may decide cases. Demo-level roles: a label, not authentication."""
     if name not in config.HUMAN_AGENTS:
-        raise HTTPException(400, f"pick a name from {config.HUMAN_AGENTS}")
+        raise HTTPException(403, f"{name!r} is not a reviewer or admin")
+    return name
+
+
+def _admin(name: str) -> str:
+    if name not in config.ADMINS:
+        raise HTTPException(403, f"{name!r} is not an admin; only admins change tool grants")
     return name
 
 
@@ -43,10 +50,11 @@ async def _customers(ids: list[Any]) -> dict[Any, dict[str, Any]]:
 async def ui_config() -> dict:
     rt = registry.RUNTIME
     labels = {"subject": "customer", "primary": "orders", "money": "refunds", "title": "Support desk"}
+    roles = {n: "admin" if n in config.ADMINS else "reviewer" for n in config.HUMAN_AGENTS}
     if rt is None:
-        return {"product": config.PRODUCT_NAME, "humans": config.HUMAN_AGENTS, "languages": config.LANGUAGES,
+        return {"product": config.PRODUCT_NAME, "humans": config.HUMAN_AGENTS, "roles": roles, "languages": config.LANGUAGES,
                 "pack": None, "labels": labels, "tool_labels": {}}
-    return {"product": rt.pack.product, "humans": config.HUMAN_AGENTS, "languages": config.LANGUAGES, "pack": rt.pack.name,
+    return {"product": rt.pack.product, "humans": config.HUMAN_AGENTS, "roles": roles, "languages": config.LANGUAGES, "pack": rt.pack.name,
             "labels": labels | {"title": "Desk"} | rt.pack.labels, "tool_labels": rt.tool_labels()}
 
 
@@ -242,3 +250,45 @@ async def metrics() -> dict:
             "takeovers": await store.db.actions.count_documents({"tool": "human_takeover"}),
             "escalations": await store.db.tickets.count_documents({"escalation": {"$ne": None}}),
             "blocked_actions": await store.db.actions.count_documents({"status": "blocked"})}
+
+
+# ---------- tool catalog and grants (admins only for changes) ----------
+
+class GrantIn(BaseModel):
+    name: str
+    tier: str | None = None
+    max_per_day: int | None = None
+    clear_cap: bool = False
+
+
+@router.get("/tools")
+async def tools_view() -> dict:
+    g = await grants.current()
+    tools = [{"name": m.name, "label": m.label or m.name, "description": m.description, "effect": m.effect,
+              "loosest_tier": m.loosest_tier, "source": m.source,
+              "secrets": [{"name": s, "present": bool(getattr(config, s, None))} for s in m.secrets],
+              "grant": jsonable({k: v for k, v in g.get(m.name, {}).items() if k != "_id"}) or None}
+             for m in grants.catalog().values()]
+    audit = [a async for a in store.db.grant_audit.find({"pack": grants.pack_name()}, {"_id": 0}).sort("at", -1).limit(20)]
+    outbox = [o async for o in store.db.outbox.find({}, {"_id": 0}).sort("created_at", -1).limit(10)]
+    return {"pack": grants.pack_name(), "tools": tools, "audit": jsonable(audit), "outbox": jsonable(outbox),
+            "note": "Demo-level roles; real login is roadmap. Admins never upload code: plugins are written and deployed by developers."}
+
+
+@router.post("/tools/{tool}/grant")
+async def grant_tool(tool: str, body: GrantIn) -> dict:
+    who = _admin(body.name)
+    if tool not in grants.catalog():
+        raise HTTPException(404, f"{tool} is not in this teammate's catalog")
+    error = grants.validate_change(tool, body.tier, body.max_per_day)
+    if error:
+        raise HTTPException(422, error)
+    return jsonable({k: v for k, v in (await grants.change(tool, who, True, body.tier, body.max_per_day, body.clear_cap)).items() if k != "_id"})
+
+
+@router.post("/tools/{tool}/revoke")
+async def revoke_tool(tool: str, body: GrantIn) -> dict:
+    who = _admin(body.name)
+    if tool not in grants.catalog():
+        raise HTTPException(404, f"{tool} is not in this teammate's catalog")
+    return jsonable({k: v for k, v in (await grants.change(tool, who, False)).items() if k != "_id"})

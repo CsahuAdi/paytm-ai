@@ -5,7 +5,7 @@ from fastapi import FastAPI
 from fastapi.responses import RedirectResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 
-from app import config, db, events
+from app import config, db, events, grants
 from app.api import dashboard, debug
 from app.channels import email_agentmail, voice, web, whatsapp_twilio
 
@@ -13,6 +13,7 @@ from app.channels import email_agentmail, voice, web, whatsapp_twilio
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     await db.connect()
+    await grants.ensure_defaults()
     yield
     await db.close()
 

@@ -69,4 +69,7 @@ TTS_PERSONAS = {
 TEXT_REPLY_CAP = 900
 VOICE_REPLY_CAP = 250
 
-HUMAN_AGENTS = [n.strip() for n in env("HUMAN_AGENTS", "Anurag,Neha,Vikram,Sana,Rahul").split(",") if n.strip()]
+# Demo-level roles (a name picked in the dashboard, not authentication; real login is roadmap).
+REVIEWERS = [n.strip() for n in env("REVIEWERS", "Neha,Vikram,Sana,Rahul").split(",") if n.strip()]  # decide cases
+ADMINS = [n.strip() for n in env("ADMINS", "Anurag").split(",") if n.strip()]  # grant, cap and tighten tools
+HUMAN_AGENTS = list(dict.fromkeys([*ADMINS, *REVIEWERS]))  # everyone who may act on cases
