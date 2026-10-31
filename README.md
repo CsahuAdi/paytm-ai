@@ -25,6 +25,7 @@ to humans with context. Built in an 8-hour hackathon on free tiers with invented
 ```
 scripts/server.sh start                                   # customer service on :8000
 PACK=kirana PORT=8001 scripts/server.sh start             # kirana desk on :8001 (its own database); simulated Paytm chat at /paytm
+PACK=librarian PORT=8005 scripts/server.sh start          # librarian on :8005 (its own database)
 python scripts/reset_demo.py [--pack kirana|librarian]    # restore seed data
 python -m pytest tests/                                   # unit tests (no LLM)
 python scripts/run_suite.py --core                        # scripted cases against :8000
