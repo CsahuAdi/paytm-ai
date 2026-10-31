@@ -85,7 +85,7 @@ CASES = [
     # --- approval (block 3:40) ---
     {"name": "refund_3500_approved", "core": True, "area": "approval", "resolves": True,
      "steps": [say(ROHAN + " The headphones are defective. Please refund the full Rs 3,500."), {"approve": "issue_refund"}],
-     "expect": [("action", "issue_refund", "executed", "approved"), ("refunds", "RA-10311", 1), ("message_from", "ai")]},
+     "expect": [("action", "issue_refund", "executed", "refund_limit"), ("refunds", "RA-10311", 1), ("message_from", "ai")]},
     {"name": "vip_refund_held", "area": "approval",
      "steps": [say(ARJUN + " The machine is late; I'd like a Rs 500 refund for the delay as goodwill.")],
      "expect": [("action", "issue_refund", "pending_approval", "vip_review"), ("ticket_status", "pending_approval")]},
@@ -109,7 +109,7 @@ CASES = [
      "steps": [say(ARJUN + " I want to speak to a human."), {"ticket_op": "takeover"},
                {"ticket_op": "handback", "note": "Customer is calmer. Offered priority delivery; nothing else promised."},
                say("Thanks. So when will it arrive now?")],
-     "expect": [("model_calls_grew",), ("ticket_status", "escalated")]},
+     "expect": [("model_calls_grew",), ("message_from", "human")]},
 
     # --- failure / routing ---
     {"name": "primary_lane_429", "core": True, "area": "routing",

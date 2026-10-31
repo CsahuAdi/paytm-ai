@@ -21,6 +21,7 @@ from app import config  # noqa: E402
 from tests.cases import CASES  # noqa: E402
 
 mongo = MongoClient(config.MONGO_URI)[config.MONGO_DB]
+PACE_S = 3.0
 
 
 class Runner:
@@ -51,6 +52,7 @@ class Runner:
 
     def step(self, s: dict[str, Any]) -> None:
         if "say" in s:
+            time.sleep(PACE_S)  # stay under the free-tier requests-per-minute limits
             t = time.perf_counter()
             r = self.http.post("/api/chat", json={"session_id": s.get("session", self.session), "text": s["say"],
                                                   "language": s.get("language", "auto"), "client_msg_id": s.get("id") or uuid.uuid4().hex})

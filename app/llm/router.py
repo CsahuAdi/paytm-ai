@@ -64,6 +64,9 @@ class Lane:
         self.cooldown_until = 0.0
         self.daily_off_until = 0.0
         self.last_error = ""
+        limit = config.DAILY_LIMITS.get(spec)
+        if limit and USAGE["calls"].get(spec, 0) >= limit:  # known exhausted today (survives restarts)
+            self.daily_off_until = _next_pacific_midnight()
         self.fault_count = 0  # test hook: fail this many calls with a fake 429 ...
         self.fault_after = 0  # ... after letting this many calls through
 
