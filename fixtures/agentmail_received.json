@@ -1,0 +1,59 @@
+{
+ "event_id": "bc87511a7a669c696530acfa18ab889f",
+ "event_type": "message.received",
+ "message": {
+  "created_at": "2026-10-31T07:19:00.327Z",
+  "extracted_text": "Hi, any update on RA-10234?\n\n--\nSent via AgentMail",
+  "from": "AgentMail <csahuadi@agentmail.to>",
+  "from_": "AgentMail <csahuadi@agentmail.to>",
+  "html": "<div dir=\"ltr\">Hi, any update on RA-10234?<br><br>On Fri, 31 Oct 2026 someone wrote:<br>&gt; old quoted text</div><div style=\"margin-top:16px;padding-top:8px;border-top:1px solid #eee;font-size:12px;color:#999;\">Sent via <a href=\"https://agentmail.to?utm_source=agentmail&utm_medium=email&utm_campaign=branded-footer&utm_content=csahuadi%40agentmail.to\" style=\"color:#999;\">AgentMail</a></div>",
+  "inbox_id": "csahuadi@agentmail.to",
+  "labels": [
+   "sent",
+   "received",
+   "unread"
+  ],
+  "message_id": "<010001a190d3781f-25e6768f-58e0-4553-b93a-29bde7b620c3-000000@email.amazonses.com>",
+  "organization_id": "f9b5404d-09c7-4e9d-bad4-0d3d3de1db02",
+  "pod_id": "f9b5404d-09c7-4e9d-bad4-0d3d3de1db02",
+  "preview": "Hi, any update on RA-10234?\n\nOn Fri, 31 Oct 2026 someone wrote:\n> old quoted text\n\n--\nSent via AgentMail",
+  "size": 1368,
+  "smtp_id": "iofdi4boe9v0quv97pd4h6meq4ctvjbdlal5lfgs",
+  "subject": "webhook smoke 2",
+  "text": "Hi, any update on RA-10234?\n\nOn Fri, 31 Oct 2026 someone wrote:\n> old quoted text\n\n--\nSent via AgentMail",
+  "thread_id": "57cea7a9-da91-43ad-b51d-098ecd2c90aa",
+  "timestamp": "2026-10-31T07:19:00.327Z",
+  "to": [
+   "csahuadi@agentmail.to"
+  ],
+  "updated_at": "2026-10-31T07:19:00.743Z"
+ },
+ "thread": {
+  "created_at": "2026-10-31T07:19:00.327Z",
+  "inbox_id": "csahuadi@agentmail.to",
+  "labels": [
+   "sent",
+   "received",
+   "unread"
+  ],
+  "last_message_id": "<010001a190d3781f-25e6768f-58e0-4553-b93a-29bde7b620c3-000000@email.amazonses.com>",
+  "message_count": 1,
+  "organization_id": "f9b5404d-09c7-4e9d-bad4-0d3d3de1db02",
+  "pod_id": "f9b5404d-09c7-4e9d-bad4-0d3d3de1db02",
+  "preview": "Hi, any update on RA-10234?\n\nOn Fri, 31 Oct 2026 someone wrote:\n> old quoted text\n\n--\nSent via AgentMail",
+  "received_timestamp": "2026-10-31T07:19:00.327Z",
+  "recipients": [
+   "csahuadi@agentmail.to"
+  ],
+  "senders": [
+   "AgentMail <csahuadi@agentmail.to>"
+  ],
+  "sent_timestamp": "2026-10-31T07:19:00.327Z",
+  "size": 1368,
+  "subject": "webhook smoke 2",
+  "thread_id": "57cea7a9-da91-43ad-b51d-098ecd2c90aa",
+  "timestamp": "2026-10-31T07:19:00.327Z",
+  "updated_at": "2026-10-31T07:19:00.743Z"
+ },
+ "type": "event"
+}

@@ -6,6 +6,8 @@ from fastapi.responses import RedirectResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 
 from app import config, db, events
+from app.api import debug
+from app.channels import email_agentmail, web, whatsapp_twilio
 
 
 @asynccontextmanager
@@ -16,6 +18,10 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title=config.PRODUCT_NAME, lifespan=lifespan)
+app.include_router(web.router)
+app.include_router(debug.router)
+app.include_router(whatsapp_twilio.router)
+app.include_router(email_agentmail.router)
 app.mount("/static", StaticFiles(directory=f"{config.ROOT}/static"), name="static")
 
 
