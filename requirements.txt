@@ -1,0 +1,14 @@
+agentmail==2.0.22
+fastapi==0.162.0
+google-genai==2.34.0
+httpx==0.28.1
+openai==3.42.0
+pydantic==2.14.2
+pymongo==4.19.0
+pytest==9.2.0
+python-dotenv==1.2.4
+python-multipart==0.0.32
+sarvamai==0.1.41
+svix==2.9.1
+twilio==9.12.0
+uvicorn==0.54.0
