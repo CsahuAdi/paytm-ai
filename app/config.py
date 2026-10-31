@@ -73,3 +73,13 @@ VOICE_REPLY_CAP = 250
 REVIEWERS = [n.strip() for n in env("REVIEWERS", "Neha,Vikram,Sana,Rahul").split(",") if n.strip()]  # decide cases
 ADMINS = [n.strip() for n in env("ADMINS", "Anurag").split(",") if n.strip()]  # grant, cap and tighten tools
 HUMAN_AGENTS = list(dict.fromkeys([*ADMINS, *REVIEWERS]))  # everyone who may act on cases
+PACK_REVIEWERS: list[str] = []  # reviewers named by the pack itself, e.g. "Sharma" (merchant)
+if PACK:
+    import yaml
+    try:
+        with open(os.path.join(ROOT, "packs", PACK, "pack.yaml")) as _f:
+            PACK_REVIEWERS = [str(n) for n in (yaml.safe_load(_f) or {}).get("reviewers", [])]
+    except OSError:
+        pass
+    REVIEWERS = list(dict.fromkeys([*REVIEWERS, *PACK_REVIEWERS]))
+    HUMAN_AGENTS = list(dict.fromkeys([*ADMINS, *REVIEWERS]))

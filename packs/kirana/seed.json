@@ -1,0 +1,291 @@
+{
+ "merchants": [
+  {
+   "merchant_id": "M-SHARMA",
+   "name": "Sharma Kirana",
+   "monthly_budget": 1000,
+   "budget_remaining": 1000,
+   "max_coupon": 300,
+   "bonus_pct": 20,
+   "insight_coupon": 30,
+   "coupon_window_days": 14,
+   "coupon_valid_days": 14,
+   "refund_eta": "3-5 working days, back to the original Paytm payment method"
+  }
+ ],
+ "customers": [
+  {
+   "customer_id": "C-101",
+   "name": "Rohit Gupta",
+   "email": "rohit.gupta@example.com",
+   "phone": "+919800000501",
+   "language": "en-IN",
+   "tier": "standard",
+   "marketing_opt_in": true
+  },
+  {
+   "customer_id": "C-102",
+   "name": "सुनीता शर्मा",
+   "name_latin": "Sunita Sharma",
+   "email": "sunita.sharma@example.com",
+   "phone": "+919800000502",
+   "language": "hi-IN",
+   "tier": "standard",
+   "marketing_opt_in": true
+  },
+  {
+   "customer_id": "C-103",
+   "name": "Imran Khan",
+   "email": "imran.khan@example.com",
+   "phone": "+919800000503",
+   "language": "en-IN",
+   "tier": "standard",
+   "marketing_opt_in": true
+  },
+  {
+   "customer_id": "C-104",
+   "name": "Meena Iyer",
+   "email": "meena.iyer@example.com",
+   "phone": "+919800000504",
+   "language": "en-IN",
+   "tier": "standard",
+   "marketing_opt_in": false
+  },
+  {
+   "customer_id": "C-105",
+   "name": "Arjun Nair",
+   "email": "arjun.nair@example.com",
+   "phone": "+919800000505",
+   "language": "en-IN",
+   "tier": "standard",
+   "marketing_opt_in": true
+  }
+ ],
+ "transactions": [
+  {
+   "txn_id": "T-9001",
+   "customer_id": "C-101",
+   "merchant_id": "M-SHARMA",
+   "amount": 240,
+   "status": "success",
+   "items": "Basmati rice 1 kg, Amul butter 100 g",
+   "date": "@days_ago:1",
+   "resolution": "none"
+  },
+  {
+   "txn_id": "T-9002",
+   "customer_id": "C-101",
+   "merchant_id": "M-SHARMA",
+   "amount": 410,
+   "status": "success",
+   "items": "Monthly groceries",
+   "date": "@days_ago:8",
+   "resolution": "none"
+  },
+  {
+   "txn_id": "T-9003",
+   "customer_id": "C-101",
+   "merchant_id": "M-SHARMA",
+   "amount": 125,
+   "status": "success",
+   "items": "Milk, bread, eggs",
+   "date": "@days_ago:20",
+   "resolution": "none"
+  },
+  {
+   "txn_id": "T-9011",
+   "customer_id": "C-102",
+   "merchant_id": "M-SHARMA",
+   "amount": 320,
+   "status": "success",
+   "items": "Atta 5 kg",
+   "date": "@days_ago:18",
+   "resolution": "none"
+  },
+  {
+   "txn_id": "T-9012",
+   "customer_id": "C-102",
+   "merchant_id": "M-SHARMA",
+   "amount": 150,
+   "status": "success",
+   "items": "Dal and spices",
+   "date": "@days_ago:25",
+   "resolution": "none"
+  },
+  {
+   "txn_id": "T-9013",
+   "customer_id": "C-102",
+   "merchant_id": "M-SHARMA",
+   "amount": 275,
+   "status": "success",
+   "items": "Cooking oil 1 L, sugar",
+   "date": "@days_ago:33",
+   "resolution": "none"
+  },
+  {
+   "txn_id": "T-9014",
+   "customer_id": "C-102",
+   "merchant_id": "M-SHARMA",
+   "amount": 90,
+   "status": "success",
+   "items": "Tea 250 g",
+   "date": "@days_ago:45",
+   "resolution": "none"
+  },
+  {
+   "txn_id": "T-9021",
+   "customer_id": "C-103",
+   "merchant_id": "M-SHARMA",
+   "amount": 210,
+   "status": "success",
+   "items": "Snacks and soft drinks",
+   "date": "@days_ago:16",
+   "resolution": "none"
+  },
+  {
+   "txn_id": "T-9022",
+   "customer_id": "C-103",
+   "merchant_id": "M-SHARMA",
+   "amount": 340,
+   "status": "success",
+   "items": "Rice 5 kg",
+   "date": "@days_ago:30",
+   "resolution": "none"
+  },
+  {
+   "txn_id": "T-9023",
+   "customer_id": "C-103",
+   "merchant_id": "M-SHARMA",
+   "amount": 120,
+   "status": "success",
+   "items": "Vegetables",
+   "date": "@days_ago:52",
+   "resolution": "none"
+  },
+  {
+   "txn_id": "T-9031",
+   "customer_id": "C-104",
+   "merchant_id": "M-SHARMA",
+   "amount": 260,
+   "status": "success",
+   "items": "Groceries",
+   "date": "@days_ago:20",
+   "resolution": "none"
+  },
+  {
+   "txn_id": "T-9032",
+   "customer_id": "C-104",
+   "merchant_id": "M-SHARMA",
+   "amount": 180,
+   "status": "success",
+   "items": "Fruits",
+   "date": "@days_ago:28",
+   "resolution": "none"
+  },
+  {
+   "txn_id": "T-9033",
+   "customer_id": "C-104",
+   "merchant_id": "M-SHARMA",
+   "amount": 300,
+   "status": "success",
+   "items": "Household items",
+   "date": "@days_ago:40",
+   "resolution": "none"
+  },
+  {
+   "txn_id": "T-9034",
+   "customer_id": "C-104",
+   "merchant_id": "M-SHARMA",
+   "amount": 95,
+   "status": "success",
+   "items": "Biscuits",
+   "date": "@days_ago:55",
+   "resolution": "none"
+  },
+  {
+   "txn_id": "T-9041",
+   "customer_id": "C-105",
+   "merchant_id": "M-SHARMA",
+   "amount": 180,
+   "status": "failed",
+   "items": "Groceries (payment failed)",
+   "date": "@days_ago:1",
+   "resolution": "none"
+  },
+  {
+   "txn_id": "T-9042",
+   "customer_id": "C-105",
+   "merchant_id": "M-SHARMA",
+   "amount": 90,
+   "status": "success",
+   "items": "Paneer 200 g",
+   "date": "@days_ago:2",
+   "resolution": "none"
+  },
+  {
+   "txn_id": "T-9043",
+   "customer_id": "C-105",
+   "merchant_id": "M-SHARMA",
+   "amount": 90,
+   "status": "duplicate",
+   "items": "Paneer 200 g (charged twice)",
+   "date": "@days_ago:2",
+   "resolution": "none"
+  }
+ ],
+ "coupons": [
+  {
+   "code": "KIRANA-7Q2P",
+   "customer_id": "C-105",
+   "merchant_id": "M-SHARMA",
+   "amount": 30,
+   "status": "issued",
+   "source": "insight",
+   "txn_id": null,
+   "created_at": "@days_ago:5",
+   "expires_at": "@days_ahead:9",
+   "redeemed_at": null,
+   "seed": true
+  }
+ ],
+ "outbox": [],
+ "grant_audit": [],
+ "tool_grants": [
+  {
+   "pack": "kirana",
+   "tool": "get_transactions",
+   "enabled": true,
+   "tier": "allow",
+   "max_per_day": null,
+   "granted_by": "seed",
+   "granted_at": "@days_ago:0"
+  },
+  {
+   "pack": "kirana",
+   "tool": "get_resolution_options",
+   "enabled": true,
+   "tier": "allow",
+   "max_per_day": null,
+   "granted_by": "seed",
+   "granted_at": "@days_ago:0"
+  },
+  {
+   "pack": "kirana",
+   "tool": "refund_to_source",
+   "enabled": true,
+   "tier": "confirm",
+   "max_per_day": null,
+   "granted_by": "seed",
+   "granted_at": "@days_ago:0"
+  },
+  {
+   "pack": "kirana",
+   "tool": "send_notification",
+   "enabled": true,
+   "tier": "allow",
+   "max_per_day": null,
+   "granted_by": "seed",
+   "granted_at": "@days_ago:0"
+  }
+ ]
+}

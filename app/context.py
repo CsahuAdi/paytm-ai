@@ -41,6 +41,7 @@ STYLE = {
     "web": "Channel: web chat. Reply in 1-4 short sentences.",
     "email": "Channel: email. Reply as a short, polite email body (no subject line), signed as the support team.",
     "whatsapp": "Channel: WhatsApp. Reply in 1-3 short sentences.",
+    "paytm": "Channel: simulated Paytm chat (text). Reply in 1-4 short sentences; refund and coupon options side by side when asked.",
 }
 
 
@@ -78,7 +79,9 @@ async def build(ctx: Ctx, new_text_en: str) -> tuple[str, str]:
 
 async def case_file(ctx: Ctx) -> str:
     t = ctx.ticket
-    reads = ["get_order", "get_tracking"] if not registry.RUNTIME else [n for n, d in registry.RUNTIME.tools.items() if d.effect == "read"]
+    reads = ["get_order", "get_tracking"] if not registry.RUNTIME else (
+        [n for n, d in registry.RUNTIME.tools.items() if d.effect == "read"]
+        + [n for n, pl in registry.RUNTIME.plugins.items() if pl.effect == "read"])
     acts = [a async for a in store.db.actions.find({"ticket_id": t["_id"], "tool": {"$nin": [*reads, "verify_identity"]}})
             .sort("created_at", -1).limit(8)]
     past = [p["resolution"] async for p in store.db.tickets.find(

@@ -41,5 +41,5 @@ def plugin_tool(*, name: str, description: str, params: type[BaseModel], effect:
 
 
 def load_all() -> dict[str, PluginTool]:
-    from plugins import book_slot  # noqa: F401  (explicit list; add new plugins here after review)
+    from plugins import book_slot, kirana  # noqa: F401  (explicit list; add new plugins here after review)
     return REGISTRY

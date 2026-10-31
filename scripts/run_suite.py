@@ -40,6 +40,7 @@ class Runner:
         self.lanes: list[str] = []
         self.notes: list[str] = []
         self.model_calls_mark: int | None = None
+        self.last: dict[str, Any] = {}  # the last debug-tool / insights response, for ("last", path, value) checks
 
     def ticket(self) -> dict[str, Any] | None:
         from bson import ObjectId
@@ -50,8 +51,8 @@ class Runner:
             t = mongo.tickets.find_one({"_id": t["merged_into"]})
         return t
 
-    def pending(self, tool: str, status: str, seeded: bool = False) -> dict[str, Any]:
-        a = mongo.actions.find_one({"tool": tool, "status": status, **({} if seeded else NOT_SEED)}, sort=[("created_at", -1)])
+    def pending(self, tool: str, status: str, seeded: bool = False, where: dict[str, Any] | None = None) -> dict[str, Any]:
+        a = mongo.actions.find_one({"tool": tool, "status": status, **({} if seeded else NOT_SEED), **(where or {})}, sort=[("created_at", -1)])
         if a is None:
             raise AssertionError(f"no {status} {tool} action to act on")
         return a
@@ -60,8 +61,12 @@ class Runner:
         if "say" in s:
             time.sleep(PACE_S)  # stay under the free-tier requests-per-minute limits
             t = time.perf_counter()
-            r = self.http.post("/api/chat", json={"session_id": s.get("session", self.session), "text": s["say"],
-                                                  "language": s.get("language", "auto"), "client_msg_id": s.get("id") or uuid.uuid4().hex})
+            if s.get("paytm"):  # the simulated Paytm channel: the customer is picked by id, pre-verified by phone
+                phone = mongo.customers.find_one({"customer_id": s["paytm"]})["phone"]
+                r = self.http.post("/api/paytm/chat", json={"phone": phone, "text": s["say"], "client_msg_id": s.get("id") or uuid.uuid4().hex})
+            else:
+                r = self.http.post("/api/chat", json={"session_id": s.get("session", self.session), "text": s["say"],
+                                                      "language": s.get("language", "auto"), "client_msg_id": s.get("id") or uuid.uuid4().hex})
             r.raise_for_status()
             d = r.json()
             self.latencies.append(time.perf_counter() - t)
@@ -80,6 +85,38 @@ class Runner:
             self.notes.append(f"voice heard={d.get('transcript')!r} reply={str(d.get('reply'))[:80]!r} note={d.get('note')}")
             t2 = mongo.tickets.find_one({"identity_id": {"$exists": True}}, sort=[("updated_at", -1)])
             self.ticket_id = str(t2["_id"]) if t2 else self.ticket_id
+        elif "tool" in s:  # {"tool": {customer_id, tool, args}}: one proposal through the real rules, no model call
+            r = self.http.post("/debug/tool", json=s["tool"])
+            self.notes.append(f"tool {s['tool']['tool']} -> {r.status_code}")
+            if s.get("expect_code") and r.status_code != s["expect_code"]:
+                raise AssertionError(f"debug tool returned {r.status_code}, expected {s['expect_code']}: {r.text[:120]}")
+            self.last = r.json() if r.headers.get("content-type", "").startswith("application/json") else {}
+        elif "confirm_last" in s:  # simulate the customer's yes on the action the last step proposed
+            r = self.http.post(f"/debug/confirm/{self.last['action_id']}")
+            r.raise_for_status()
+            self.last = r.json()
+        elif "set" in s:  # {"set": [collection, filter, fields]}: edit seed data mid-test
+            coll, flt, fields = s["set"]
+            self.http.post("/debug/set", json={"collection": coll, "filter": flt, "set": fields}).raise_for_status()
+        elif "pay" in s:  # {"pay": {customer_id, amount, coupon: "latest"|None, coupon_owner?}, "expect_code": n}: simulated payment at the store
+            spec = s["pay"]
+            cust = mongo.customers.find_one({"customer_id": spec["customer_id"]})
+            code = None
+            if spec.get("coupon") == "latest":
+                code = mongo.coupons.find_one({"customer_id": spec.get("coupon_owner", spec["customer_id"])}, sort=[("created_at", -1)])["code"]
+            r = self.http.post("/api/paytm/pay", json={"phone": cust["phone"], "amount": spec["amount"], "coupon_code": code})
+            self.notes.append(f"pay -> {r.status_code}")
+            if s.get("expect_code") and r.status_code != s["expect_code"]:
+                raise AssertionError(f"pay returned {r.status_code}, expected {s['expect_code']}: {r.text[:120]}")
+            self.last = r.json()
+        elif "get" in s:  # {"get": path}: keep the JSON for ("last", ...) checks
+            r = self.http.get(s["get"])
+            r.raise_for_status()
+            self.last = r.json()
+        elif "insights" in s:  # the simulated Paytm insights feed
+            r = self.http.post("/api/insights/run", json={"name": s.get("by", "Sharma")})
+            r.raise_for_status()
+            self.last = r.json()
         elif "api" in s:  # {"api": [method, path, body], "expect_code": n}
             method, path, body = s["api"]
             r = self.http.request(method, path, json=body)
@@ -96,7 +133,7 @@ class Runner:
             self.http.post("/debug/fault", json=s["fault"]).raise_for_status()
         elif "approve" in s or "reject" in s:
             kind = "approve" if "approve" in s else "reject"
-            a = self.pending(s[kind], s.get("status", "pending_approval"), s.get("seeded", False))
+            a = self.pending(s[kind], s.get("status", "pending_approval"), s.get("seeded", False), s.get("where"))
             body = {"name": s.get("by", "Neha"), "note": s.get("note", "")}
             if s.get("double"):
                 with ThreadPoolExecutor(2) as pool:
@@ -187,10 +224,18 @@ class Runner:
             coll, flt, n = rest
             got = mongo[coll].count_documents(flt)
             return None if got == n else f"{coll} {flt}: {got} documents, expected {n}"
-        if kind == "doc":  # ("doc", collection, filter, field, expected)
+        if kind == "doc":  # ("doc", collection, filter, field, expected); field may be dotted: options_presented.coupon
             coll, flt, field, expected = rest
-            doc = mongo[coll].find_one(flt) or {}
-            return None if doc.get(field) == expected else f"{coll} {flt} {field}={doc.get(field)!r}, expected {expected!r}"
+            got: Any = mongo[coll].find_one(flt) or {}
+            for part in field.split("."):
+                got = got.get(part) if isinstance(got, dict) else None
+            return None if got == expected else f"{coll} {flt} {field}={got!r}, expected {expected!r}"
+        if kind == "last":  # ("last", "rule_id", "options_not_presented"); dotted path, list indexes allowed
+            path, expected = rest
+            got = self.last
+            for part in path.split("."):
+                got = got[int(part)] if isinstance(got, list) and part.isdigit() and int(part) < len(got) else (got.get(part) if isinstance(got, dict) else None)
+            return None if got == expected else f"last.{path}={got!r}, expected {expected!r}"
         if kind == "lane_not_used":
             return None if all(rest[0] not in lane for lane in self.lanes) else f"lane {rest[0]} should have been skipped: {self.lanes}"
         if kind == "same_ticket_channels":
@@ -211,9 +256,24 @@ def violations() -> list[str]:
     writes = ["issue_refund", "create_reship", "cancel_order"]
     if config.PACK:
         from app.packs.spec import load
-        writes = [t.name for t in load(config.PACK, config.ROOT).tools if t.effect != "read"]
+        from plugins import load_all
+        pack, available = load(config.PACK, config.ROOT), load_all()
+        writes = [t.name for t in pack.tools if t.effect != "read"] + [n for n in pack.plugins if available[n].effect != "read"]
         for loan in mongo.loans.find({"renewals": {"$gt": 2}}):  # librarian invariant
             out.append(f"{loan.get('loan_id')}: renewed {loan['renewals']} times")
+        if config.PACK == "kirana":  # coupon invariants: amounts come from policy, never reversals, never un-opted-in insights
+            merchant = mongo.merchants.find_one() or {}
+            if merchant.get("budget_remaining", 0) < 0:
+                out.append("coupon budget below zero")
+            for c in mongo.coupons.find():
+                if c["amount"] > merchant.get("max_coupon", 10**9):
+                    out.append(f"{c['code']}: Rs {c['amount']} above the max coupon")
+                txn = mongo.transactions.find_one({"txn_id": c.get("txn_id")}) if c.get("txn_id") else None
+                if txn and (txn["status"] in ("failed", "duplicate") or txn.get("resolution") == "refund"):
+                    out.append(f"{c['code']}: coupon on a {txn['status']}/{txn.get('resolution')} transaction")
+                cust = mongo.customers.find_one({"customer_id": c["customer_id"]}) or {}
+                if c["source"] == "insight" and not cust.get("marketing_opt_in"):
+                    out.append(f"{c['code']}: insight coupon to a customer who did not opt in")
     for a in mongo.actions.find({"status": "executed", "tool": {"$in": writes}}):
         if a.get("customer_id") is None:
             out.append(f"{a['tool']} executed without a verified customer")
