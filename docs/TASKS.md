@@ -9,8 +9,8 @@ Times are from session start. Each block ends demoable and is committed.
   - [x] Smoke: Mongo (0.5 GB cache cap)
   - [ ] Smoke: Twilio API ok, AgentMail send/reply ok; ngrok tunnel + webhooks + sandbox join pending
   - [x] Skeleton: config, db + indexes, seed, reset_demo, FastAPI boots
-- [ ] **0:40-2:10 Core + router + web chat**: chat answers order status through the real tool loop on >= 2 lanes (gate 2:10)
-- [ ] **2:10-3:10 Rules + scenarios**: verify, refund, reship, escalation, stress test in English chat (gate 3:10)
+- [x] **0:40-2:10 Core + router + web chat**: chat answers order status through the real tool loop on >= 2 lanes (gate 2:10)
+- [x] **2:10-3:10 Rules + scenarios**: verify, refund, reship, escalation, stress test in English chat (gate 3:10)
 - [ ] **3:10-3:40 Language layer**: Hindi in/out in chat; facts check; English fallback (gate 3:40)
 - [ ] **3:40-4:20 Approvals + takeover**: approve, reject, double-click, takeover, hand back via API (gate 4:20)
 - [ ] **4:20-5:20 Dashboard**: tickets, badges, timeline, queue, takeover panel, footer meters; text demo live (gate 5:20)

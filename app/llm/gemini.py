@@ -1,4 +1,6 @@
 """Gemini adapter (google-genai): forced function calling (mode ANY) and JSON-schema output."""
+import json
+import re
 import uuid
 
 from google import genai
@@ -12,9 +14,13 @@ from app.llm.schema import strict_schema
 
 def _failure(e: Exception) -> LaneFailure:
     if isinstance(e, errors.APIError):
-        text = str(e)
-        daily = e.code == 429 and ("PerDay" in text or "per day" in text.lower())
-        return LaneFailure("http", status=e.code, daily=daily, detail=text)
+        raw = json.dumps(getattr(e, "details", None) or str(e), default=str)
+        quota = sorted(set(re.findall(r'"quotaId": "([^"]+)"', raw)))
+        delay = re.search(r'"retryDelay": "(\d+(?:\.\d+)?)s"', raw)
+        daily = e.code == 429 and any("PerDay" in q for q in quota)
+        detail = f"quota={quota} " if quota else ""
+        return LaneFailure("http", status=e.code, daily=daily, retry_after=float(delay.group(1)) if delay else None,
+                           detail=detail + str(e)[:150])
     return LaneFailure("error", detail=f"{type(e).__name__}: {e}")
 
 
