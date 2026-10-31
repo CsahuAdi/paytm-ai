@@ -9,6 +9,13 @@ to humans with context. Built in an 8-hour hackathon on free tiers with invented
   policy.md, seed.json). Logic that configuration cannot express (several collections changing at once, rules over
   counts, generated IDs, external systems) is written by developers as plugin tools in `plugins/`, as customer service
   and `book_slot` do.
+- **Kirana pack and the simulated Paytm channel** (`packs/kirana/`): a neighbourhood store's desk reached through a
+  text-only "via Paytm" chat page. A complaint gets a refund-or-coupon choice side by side (coupon amount set by store
+  policy, never by the model); a deterministic "Paytm insights" rule proposes win-back coupons that the merchant approves.
+  **The Paytm channel, transaction data, insights and (stretch) redemption are all simulated with fake data: no Paytm APIs,
+  data or partnership are used or implied, and every figure from the simulation is labelled simulated.** The kirana pack is
+  config for everything except the custom coupon logic, which is two developer plugins (`plugins/kirana.py`). The selected
+  customer is pre-verified like a matched WhatsApp number; real trust would come from the Paytm session.
 - **Roles**: AI teammates act within rules and granted tools; reviewers approve held actions and take over tickets;
   admins grant, cap and tighten tools per teammate (audited). **These are demo-level roles chosen from a dropdown,
   not authentication; real login is roadmap.**
@@ -17,8 +24,8 @@ to humans with context. Built in an 8-hour hackathon on free tiers with invented
 
 ```
 scripts/server.sh start                                   # customer service on :8000
-PACK=librarian PORT=8001 scripts/server.sh start          # librarian on :8001 (its own database)
-python scripts/reset_demo.py [--pack librarian]           # restore seed data
+PACK=kirana PORT=8001 scripts/server.sh start             # kirana desk on :8001 (its own database); simulated Paytm chat at /paytm
+python scripts/reset_demo.py [--pack kirana|librarian]    # restore seed data
 python -m pytest tests/                                   # unit tests (no LLM)
 python scripts/run_suite.py --core                        # scripted cases against :8000
 ```
