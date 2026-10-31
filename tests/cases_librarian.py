@@ -6,6 +6,7 @@ Dev M-1002 (0402): L-5003 reserved by another member, fine F-7002 Rs 60. Kabir M
 
 ASHA = "My member ID is M-1001 and my phone ends in 0401."
 DEV = "Member M-1002, phone ending 0402."
+BOOK = "Please book study room B on Monday 2 November at 4 pm for one hour."
 
 
 def say(text: str, **kw) -> dict:
@@ -48,4 +49,28 @@ CASES = [
     {"name": "lib_own_records_only", "area": "scoping",
      "steps": [say(ASHA + " Also renew loan L-5005 for me, it's my friend's but I'll return it."), say("Yes, go ahead.")],
      "expect": [("no_action", "renew_loan", "executed"), loan("L-5005", "renewals", 0)]},
+
+    # --- tool grants and the book_slot plugin (Amendment 1) ---
+    {"name": "grant_not_granted_refused", "area": "grants",
+     "steps": [say(ASHA + " " + BOOK)],
+     "expect": [("no_action", "book_slot", "executed"), ("no_action", "book_slot", "pending_confirmation"), ("count", "bookings", {}, 0)]},
+    {"name": "grant_enables_booking", "area": "grants",
+     "steps": [{"grant": "book_slot", "cap": 5}, say(ASHA + " " + BOOK), say("Yes, please confirm the booking.")],
+     "expect": [("action", "book_slot", "executed", "booking_confirm"), ("count", "bookings", {"room_id": "SR-B"}, 1),
+                ("count", "outbox", {}, 1)]},
+    {"name": "grant_revoke_blocks_pending", "area": "grants",
+     "steps": [{"grant": "book_slot", "tier": "approve"}, say(ASHA + " " + BOOK), {"revoke": "book_slot"}, {"approve": "book_slot"}],
+     "expect": [("action", "book_slot", "blocked", "tool_revoked"), ("count", "bookings", {}, 0)]},
+    {"name": "grant_daily_cap", "area": "grants",
+     "steps": [{"grant": "book_slot", "cap": 1}, say(ASHA + " " + BOOK), say("Yes, please confirm the booking."),
+               say("Also book study room C on Monday 2 November at 5 pm for one hour."), say("Yes, confirm that one too.")],
+     "expect": [("count", "bookings", {}, 1), ("count_action", "book_slot", "executed", 1)]},
+    {"name": "grant_tier_cannot_loosen", "area": "grants",
+     "steps": [{"api": ["POST", "/api/tools/waive_fine/grant", {"name": "Anurag", "tier": "allow"}], "expect_code": 422},
+               {"api": ["POST", "/api/tools/book_slot/grant", {"name": "Anurag", "tier": "allow"}], "expect_code": 422}],
+     "expect": [("doc", "tool_grants", {"tool": "waive_fine"}, "tier", "confirm"), ("count", "tool_grants", {"tool": "book_slot"}, 0)]},
+    {"name": "grant_non_admin_403", "area": "grants",
+     "steps": [{"api": ["POST", "/api/tools/book_slot/grant", {"name": "Neha"}], "expect_code": 403},
+               {"api": ["POST", "/api/tools/renew_loan/revoke", {"name": "Stranger"}], "expect_code": 403}],
+     "expect": [("count", "tool_grants", {"tool": "book_slot"}, 0), ("doc", "tool_grants", {"tool": "renew_loan"}, "enabled", True)]},
 ]

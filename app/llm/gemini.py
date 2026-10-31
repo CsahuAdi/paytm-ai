@@ -1,7 +1,9 @@
 """Gemini adapter (google-genai): forced function calling (mode ANY) and JSON-schema output."""
+import asyncio
 import json
 import re
 import uuid
+from typing import Any
 
 from google import genai
 from google.genai import errors, types
@@ -24,6 +26,21 @@ def _failure(e: Exception) -> LaneFailure:
     return LaneFailure("error", detail=f"{type(e).__name__}: {e}")
 
 
+async def _generate(client: genai.Client, model: str, contents: Any, config: types.GenerateContentConfig) -> Any:
+    """One retry on a transient 500/503 before the lane counts as failed (Gemma returns a random 500 INTERNAL now and then)."""
+    for attempt in range(2):
+        try:
+            return await client.aio.models.generate_content(model=model, contents=contents, config=config)
+        except errors.APIError as e:
+            if attempt == 0 and e.code in (500, 503):
+                await asyncio.sleep(0.5)
+                continue
+            raise _failure(e) from e
+        except Exception as e:  # noqa: BLE001
+            raise _failure(e) from e
+    raise LaneFailure("error", detail="unreachable")
+
+
 class GeminiSession:
     def __init__(self, client: genai.Client, model: str, system: str, user: str, tools: list[ToolSpec]) -> None:
         self.client, self.model = client, model
@@ -43,10 +60,7 @@ class GeminiSession:
             self.contents.append(types.Content(role="user", parts=[
                 types.Part(function_response=types.FunctionResponse(id=r.call.id, name=r.call.name, response=r.payload))
                 for r in results]))
-        try:
-            resp = await self.client.aio.models.generate_content(model=self.model, contents=self.contents, config=self.config)
-        except Exception as e:  # noqa: BLE001
-            raise _failure(e) from e
+        resp = await _generate(self.client, self.model, self.contents, self.config)
         content = resp.candidates[0].content if resp.candidates else None
         if content is None or not resp.function_calls:
             raise LaneFailure("invalid", detail="no function call in response")
@@ -65,12 +79,8 @@ class GeminiAdapter:
         return GeminiSession(self._client(), self.model, system, user, tools)
 
     async def structured(self, prompt: str, model: type[BaseModel]) -> BaseModel:
-        try:
-            resp = await self._client().aio.models.generate_content(
-                model=self.model, contents=prompt,
-                config=types.GenerateContentConfig(response_mime_type="application/json", response_json_schema=strict_schema(model)))
-        except Exception as e:  # noqa: BLE001
-            raise _failure(e) from e
+        resp = await _generate(self._client(), self.model, prompt,
+                               types.GenerateContentConfig(response_mime_type="application/json", response_json_schema=strict_schema(model)))
         try:
             return model.model_validate_json(resp.text or "")
         except ValidationError as e:

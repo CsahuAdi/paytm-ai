@@ -80,6 +80,18 @@ class Runner:
             self.notes.append(f"voice heard={d.get('transcript')!r} reply={str(d.get('reply'))[:80]!r} note={d.get('note')}")
             t2 = mongo.tickets.find_one({"identity_id": {"$exists": True}}, sort=[("updated_at", -1)])
             self.ticket_id = str(t2["_id"]) if t2 else self.ticket_id
+        elif "api" in s:  # {"api": [method, path, body], "expect_code": n}
+            method, path, body = s["api"]
+            r = self.http.request(method, path, json=body)
+            self.notes.append(f"api {method} {path} -> {r.status_code}")
+            if s.get("expect_code") and r.status_code != s["expect_code"]:
+                raise AssertionError(f"{path} returned {r.status_code}, expected {s['expect_code']}: {r.text[:120]}")
+        elif "grant" in s or "revoke" in s:  # admin actions in the Tools tab
+            kind = "grant" if "grant" in s else "revoke"
+            body = {"name": s.get("by", "Anurag"), "max_per_day": s.get("cap"), "tier": s.get("tier")}
+            r = self.http.post(f"/api/tools/{s[kind]}/{kind}", json=body)
+            self.notes.append(f"{kind} {s[kind]} -> {r.status_code}")
+            r.raise_for_status()
         elif "fault" in s:
             self.http.post("/debug/fault", json=s["fault"]).raise_for_status()
         elif "approve" in s or "reject" in s:
@@ -171,6 +183,10 @@ class Runner:
             return None if mongo.messages.count_documents({f"meta.{key}": {"$exists": True, "$ne": None}, **NOT_SEED}) else f"no message with meta.{key}"
         if kind == "lane_used":
             return None if any(rest[0] in lane for lane in self.lanes) else f"lane {rest[0]} not used: {self.lanes}"
+        if kind == "count":  # ("count", collection, filter, n)
+            coll, flt, n = rest
+            got = mongo[coll].count_documents(flt)
+            return None if got == n else f"{coll} {flt}: {got} documents, expected {n}"
         if kind == "doc":  # ("doc", collection, filter, field, expected)
             coll, flt, field, expected = rest
             doc = mongo[coll].find_one(flt) or {}
