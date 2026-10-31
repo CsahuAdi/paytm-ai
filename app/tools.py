@@ -181,7 +181,10 @@ async def verify_identity(ctx: Ctx, a: VerifyIdentity) -> dict[str, Any]:
         ctx.customer = customer
         ctx.ticket = await tickets.attach_customer(ctx.ticket, customer["_id"])
         await record(ctx, "verify_identity", args, decision, "executed", {"verified": True})
-        return {"verified": True, "customer_name": customer["name"], "tier": customer["tier"], "order_number": order["order_number"]}
+        await store.db.tickets.update_one({"_id": ctx.ticket["_id"]}, {"$addToSet": {"order_ids": order["_id"]}})
+        # The order is preloaded here to save a model call (latency and free-tier quota); only after verification.
+        return {"verified": True, "customer_name": customer["name"], "tier": customer["tier"],
+                "order": order_view(order), "tracking": tracking_view(order)}
     ctx.identity = await store.db.identities.find_one_and_update(
         {"_id": ctx.identity["_id"]}, {"$inc": {"attempts": 1}}, return_document=ReturnDocument.AFTER)
     attempts = ctx.identity["attempts"]
