@@ -34,7 +34,8 @@ class GeminiSession:
                 types.FunctionDeclaration(name=t.name, description=t.description, parameters_json_schema=t.schema) for t in tools])],
             tool_config=types.ToolConfig(function_calling_config=types.FunctionCallingConfig(mode=types.FunctionCallingConfigMode.ANY)),
             automatic_function_calling=types.AutomaticFunctionCallingConfig(disable=True),
-            thinking_config=types.ThinkingConfig(thinking_level=types.ThinkingLevel.LOW),
+            # Gemma models reject a thinking setting; Gemini 3 models get LOW (latency).
+            thinking_config=None if model.startswith("gemma") else types.ThinkingConfig(thinking_level=types.ThinkingLevel.LOW),
         )
 
     async def step(self, results: list[ToolResult] | None) -> list[ToolCall]:
