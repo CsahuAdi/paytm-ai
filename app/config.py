@@ -31,7 +31,7 @@ GROQ_API_KEY = env("GROQ_API_KEY")
 OPENROUTER_API_KEY = env("OPENROUTER_API_KEY")
 LLM_LANES = [env(f"LLM_LANE_{i}") for i in range(1, 9) if env(f"LLM_LANE_{i}")]
 LLM_LIGHT_MODEL = env("LLM_LIGHT_MODEL", "gemini-3.5-flash-lite")
-LLM_TIMEOUT_S = 10.0
+LLM_TIMEOUT_S = float(env("LLM_TIMEOUT_S", "10"))
 # Free-tier requests/day per lane (AI Studio, Groq headers, OpenRouter key), shown in the footer meter.
 DAILY_LIMITS = {"gemini:gemini-3.5-flash-lite": 500, "gemini:gemma-4-26b-a4b-it": 14400, "gemini:gemini-3.1-flash-lite": 500, "gemini:gemini-3.6-flash": 20,
                 "gemini:gemini-3.8-flash": 20, "groq:openai/gpt-oss-120b": 1000, "openrouter:nvidia/nemotron-3.5-super-vl:free": 50}

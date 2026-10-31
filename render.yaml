@@ -1,0 +1,33 @@
+# Render Blueprint: three free web services from one image (customer service, kirana, librarian) on one free MongoDB Atlas cluster.
+# Secrets live in ONE environment group named resolveai-secrets, created in the Render dashboard before applying this file
+# (see docs/DEPLOY.md). Nothing secret is in this repo.
+services:
+  - type: web
+    name: resolveai
+    runtime: docker
+    plan: free
+    healthCheckPath: /health
+    envVars:
+      - fromGroup: resolveai-secrets
+      - key: PUBLIC_BASE_URL # this service's own https URL, set after the first deploy (Twilio signature check)
+        sync: false
+
+  - type: web
+    name: resolveai-kirana
+    runtime: docker
+    plan: free
+    healthCheckPath: /health
+    envVars:
+      - fromGroup: resolveai-secrets
+      - key: PACK
+        value: kirana
+
+  - type: web
+    name: resolveai-librarian
+    runtime: docker
+    plan: free
+    healthCheckPath: /health
+    envVars:
+      - fromGroup: resolveai-secrets
+      - key: PACK
+        value: librarian
