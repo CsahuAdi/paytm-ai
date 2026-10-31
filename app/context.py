@@ -20,7 +20,8 @@ FOLD_AT = 20
 SUMMARY_MAX_CHARS = 1500
 
 POLICY_TEXT = f"""Store policy ({config.PRODUCT_NAME} support for an online D2C store):
-- Verify identity before discussing or changing any order: ask for the order number and, on chat/email/WhatsApp, the email address on the order; on voice, the last 4 digits of the phone number. Only verify_identity can verify.
+- If the Session block says "verified": true, the customer is already verified: never ask for their email, phone digits or other identity details again. If they don't name an order, use the orders in scope (the most recent one first) or ask which order they mean.
+- Otherwise verify identity before discussing or changing any order: ask for the order number and, on chat/email/WhatsApp, the email address on the order; on voice, the last 4 digits of the phone number. Only verify_identity can verify.
 - Refunds up to Rs {config.AUTO_REFUND_LIMIT_INR} run after the customer says yes. Larger refunds and every VIP refund need a human approver. A refund can never exceed the order total, and an order gets at most one refund.
 - Damaged or missing items: offer a refund for the item and/or a free replacement (reship). Only unshipped orders can be cancelled.
 - The rules engine decides every action. If a tool result says blocked or pending, tell the customer honestly; never claim an action happened unless its result says executed.

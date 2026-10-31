@@ -71,14 +71,27 @@ async def deliver(ticket: dict[str, Any], text: str, last: dict[str, Any]) -> No
 core.SENDERS["whatsapp"] = deliver
 
 
-@router.post("/webhooks/twilio")
-async def twilio_webhook(request: Request, background: BackgroundTasks) -> Response:
+async def _webhook(request: Request, background: BackgroundTasks, signed_urls: list[str]) -> Response:
     form = dict(await request.form())
     signature = request.headers.get("X-Twilio-Signature", "")
-    if not RequestValidator(config.TWILIO_AUTH_TOKEN).validate(public_url(request), form, signature):
+    validator = RequestValidator(config.TWILIO_AUTH_TOKEN)
+    if not any(validator.validate(url, form, signature) for url in signed_urls):
         raise HTTPException(403, "bad signature")
     if config.DEBUG and request.query_params.get("sync"):  # simulator/tests: process inline
         out = await process(form)
         return Response(f'{{"ticket_id": "{out.ticket_id if out else ""}"}}', media_type="application/json")
     background.add_task(process, form)
     return Response(EMPTY_TWIML, media_type="application/xml")
+
+
+@router.post("/webhooks/twilio")
+async def twilio_webhook(request: Request, background: BackgroundTasks) -> Response:
+    return await _webhook(request, background, [public_url(request)])
+
+
+@router.post("/")
+async def twilio_root(request: Request, background: BackgroundTasks) -> Response:
+    """The sandbox URL is sometimes saved as the bare domain; Twilio then signs exactly that URL."""
+    if "X-Twilio-Signature" not in request.headers:
+        raise HTTPException(405, "Method Not Allowed")
+    return await _webhook(request, background, [config.PUBLIC_BASE_URL, f"{config.PUBLIC_BASE_URL}/"])
