@@ -79,7 +79,8 @@ async def handle(inb: Inbound) -> Outcome:
         except DuplicateKeyError:
             return Outcome(ticket_id=str(ticket["_id"]), duplicate=True, status=ticket["status"])
         language = lang_in.language if lang_in.language in config.LANGUAGES else "en-IN"
-        await store.db.tickets.update_one({"_id": ticket["_id"]}, {"$set": {"language": language, "updated_at": now()}})
+        await store.db.tickets.update_one({"_id": ticket["_id"]}, {"$set": {
+            "language": language, "script": lang_in.meta.get("script", "native"), "updated_at": now()}})
         events.publish("message", ticket["_id"], session=inb.sender, author="customer", text_en=lang_in.text_en, channel=inb.channel)
         if ticket["mode"] == "human":
             return Outcome(ticket_id=str(ticket["_id"]), status=ticket["status"], meta={"mode": "human"})
@@ -91,6 +92,8 @@ async def handle(inb: Inbound) -> Outcome:
         reply_en = reply.reply_en if reply else FALLBACK_EN
         if escalated and reply and reply.escalation_reason == "none" and not any(d.rule_id.startswith("escalate_") for d in ctx.escalations):
             reply_en = f"{reply_en} {HANDOFF_EN}"
+        if lang_in.meta.get("unsupported_language"):
+            reply_en = f"{reply_en} {layer.SUPPORTED_LINE}"
         cap = config.VOICE_REPLY_CAP if inb.modality == "voice" else config.TEXT_REPLY_CAP
         reply_en = reply_en[:cap]
         facts = [f.value for f in reply.facts] if reply else []
@@ -99,8 +102,11 @@ async def handle(inb: Inbound) -> Outcome:
         await settle_status(ctx.ticket["_id"])
         asyncio.create_task(context.maybe_fold(ctx.ticket["_id"]))
         status = (await store.db.tickets.find_one({"_id": ctx.ticket["_id"]}))["status"]
+        meta = {"lane": lane_name, **out["meta"]}
+        if lang_in.meta.get("translation_failed"):
+            meta["translation_failed"] = True
         return Outcome(ticket_id=str(ctx.ticket["_id"]), message_id=str(out["_id"]), reply=out["text"], reply_en=reply_en,
-                       language=out["language"], status=status, meta={"lane": lane_name, **out["meta"]})
+                       language=out["language"], status=status, meta=meta)
 
 
 async def agent_turn(ctx: Ctx, text_en: str) -> tuple[ReplyToCustomer | None, str | None]:
@@ -193,7 +199,8 @@ async def settle_status(ticket_id: ObjectId) -> None:
 async def store_reply(ticket: dict[str, Any], text_en: str, channel: str, modality: str, facts: list[str], author: str,
                       session: str | None, author_name: str | None = None, meta: dict[str, Any] | None = None) -> dict[str, Any]:
     """Translate an English reply into the ticket's language, store it, publish it."""
-    out = await layer.from_english(text_en, ticket.get("language") or "en-IN", modality, facts)
+    fresh = await store.db.tickets.find_one({"_id": ticket["_id"]}, {"language": 1, "script": 1}) or ticket
+    out = await layer.from_english(text_en, fresh.get("language") or "en-IN", modality, facts, fresh.get("script", "native"))
     msg = {"_id": ObjectId(), "ticket_id": ticket["_id"], "author": author, "author_name": author_name, "channel": channel,
            "modality": modality, "language": out.language, "text": out.text, "text_en": text_en, "external_id": None,
            "meta": {**(meta or {}), **out.meta}, "created_at": now()}

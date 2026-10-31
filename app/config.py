@@ -13,6 +13,7 @@ def env(name: str, default: str = "") -> str:
 
 PRODUCT_NAME = env("PRODUCT_NAME", "ResolveAI")
 DEBUG = env("DEBUG") == "1"
+DEMO_MODE = env("DEMO_MODE") == "1"  # lets Sarvam run below the Rs 10 reserve
 
 MONGO_URI = env("MONGO_URI", "mongodb://localhost:27017")
 MONGO_DB = env("MONGO_DB", "resolveai")
