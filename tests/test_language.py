@@ -69,6 +69,8 @@ def test_unsupported_language_gets_english(monkeypatch):
     ("Yes, please go ahead with the refund.", True),
     ("RA-10234", True),
     ("mera order kahan hai bhai", False),
+    ("Order RA-10402, my email is arjun.mehta@example.com. My espresso machine is 3 days late. I am filing a case in consumer court.", True),
+    ("bhai mera parcel abhi tak nahi aaya", False),
     ("मेरा ऑर्डर कहाँ है?", False),
 ])
 def test_looks_english(text, english):

@@ -12,11 +12,10 @@ from app import config
 from app.lang import facts_check, sarvam
 
 log = logging.getLogger("lang")
-ENGLISH_HINTS = set("""a an and are as at be but by can do for from have hello hi how i i'm if in is it me my no not of on or
-order please refund my the this to was what when where why will with yes you your thanks thank ok okay sorry still
-delivered damaged broken cancel email number tracking arrive help want need got received item has been week
-day days today yesterday there here that they their just also very much any update"""
-.split())
+# Romanized Hindi/Hinglish markers. ASCII text is English unless enough of its words are these.
+ROMAN_INDIC = set("""hai hain mera meri mere mujhe mujhko aap aapka aapki tum kya kyu kyun kab kahan kaha kaise nahi nahin
+abhi tak gaya gayi raha rahi tha thi karo kar karna chahiye mein main ka ki ke ko se par bhai bhaiya yaar paisa paise
+wapas aaya aayi hua hui kuch bahut accha theek haan ji sahi jaldi kal aaj ghar""".split())
 SUPPORTED_LINE = ("I can also help in Hindi, Bengali, Gujarati, Kannada, Malayalam, Marathi, Punjabi, Odia, Tamil and Telugu.")
 
 
@@ -37,10 +36,10 @@ class OutText:
 def looks_english(text: str) -> bool:
     if not text.isascii():
         return False
-    words = re.findall(r"[a-zA-Z']{3,}", text.lower())
+    words = re.findall(r"[a-zA-Z']+", text.lower())
     if not words:
         return True
-    return sum(w in ENGLISH_HINTS for w in words) / len(words) >= 0.25
+    return sum(w in ROMAN_INDIC for w in words) / len(words) < 0.2
 
 
 async def to_english(text: str, pinned: str | None, modality: str) -> InText:

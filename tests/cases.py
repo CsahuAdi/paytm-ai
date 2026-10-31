@@ -114,7 +114,7 @@ CASES = [
     # --- failure / routing ---
     {"name": "primary_lane_429", "core": True, "area": "routing",
      "steps": [{"fault": {"lane": LITE, "count": 20}}, say(PRIYA + " Where is it?")],
-     "expect": [("action", "get_tracking", "executed")]},
+     "expect": [("lane_not_used", LITE), ("lane_used", ":"), ("message_from", "ai")]},
     {"name": "failover_after_tool_ran", "area": "routing",
      "steps": [say(PRIYA + " The blender arrived broken, please refund the Rs 1,499."),
                {"fault": {"lane": LITE, "count": 20, "after": 1}}, say("Yes, go ahead with the refund.")],

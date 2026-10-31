@@ -13,7 +13,7 @@ Times are from session start. Each block ends demoable and is committed.
 - [x] **2:10-3:10 Rules + scenarios**: verify, refund, reship, escalation, stress test in English chat (gate 3:10)
 - [ ] **3:10-3:40 Language layer**: Hindi in/out in chat; facts check; English fallback (gate 3:40)
 - [x] **3:40-4:20 Approvals + takeover**: approve, reject, double-click, takeover, hand back via API (gate 4:20)
-- [ ] **4:20-5:20 Dashboard**: tickets, badges, timeline, queue, takeover panel, footer meters; text demo live (gate 5:20)
+- [x] **4:20-5:20 Dashboard**: tickets, badges, timeline, queue, takeover panel, footer meters; text demo live (gate 5:20)
 - [ ] **5:20-6:00 Web voice**: push-to-talk Hindi + English with spoken reply (gate 6:00)
 - [ ] **6:00-6:30 Email**: AgentMail in/out on the same ticket as chat; go/no-go for WhatsApp (gate 6:30)
 - [ ] **6:30-7:00 WhatsApp**: only if the English suite is green

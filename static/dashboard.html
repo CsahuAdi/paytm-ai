@@ -1,0 +1,284 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ResolveAI · Support desk</title>
+<style>
+  :root {
+    --bg:#f4f5f7; --panel:#fff; --ink:#18202f; --muted:#667085; --line:#e4e7ec; --soft:#f9fafb;
+    --blue:#2563eb; --green:#15803d; --green-bg:#dcfce7; --amber:#b45309; --amber-bg:#fef3c7;
+    --red:#b91c1c; --red-bg:#fee2e2; --violet:#6d28d9; --violet-bg:#ede9fe; --grey-bg:#eef0f3;
+  }
+  * { box-sizing:border-box; }
+  body { margin:0; font:14px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif; color:var(--ink); background:var(--bg); }
+  header { display:flex; align-items:center; gap:14px; padding:10px 18px; background:var(--panel); border-bottom:1px solid var(--line); flex-wrap:wrap; }
+  header h1 { font-size:17px; margin:0; }
+  header h1 span { color:var(--muted); font-weight:500; }
+  header .grow { flex:1; }
+  header a { color:var(--blue); text-decoration:none; font-size:13px; }
+  select, input, textarea, button { font:inherit; }
+  button { cursor:pointer; border:1px solid var(--line); background:var(--panel); border-radius:8px; padding:5px 11px; }
+  button.primary { background:var(--blue); border-color:var(--blue); color:#fff; }
+  button.ok { background:var(--green); border-color:var(--green); color:#fff; }
+  button.danger { color:var(--red); border-color:#fecaca; }
+  button:disabled { opacity:.5; cursor:default; }
+  main { display:grid; grid-template-columns: 300px minmax(0,1fr) 360px; gap:14px; padding:14px 18px 70px; height:calc(100vh - 54px); }
+  .col { background:var(--panel); border:1px solid var(--line); border-radius:12px; overflow:hidden; display:flex; flex-direction:column; min-height:0; }
+  .col h2 { font-size:12px; text-transform:uppercase; letter-spacing:.06em; color:var(--muted); margin:0; padding:11px 14px; border-bottom:1px solid var(--line); display:flex; align-items:center; gap:8px; }
+  .col h2 .count { background:var(--grey-bg); color:var(--ink); border-radius:10px; padding:0 7px; font-size:11px; }
+  .scroll { overflow-y:auto; flex:1; min-height:0; }
+  .ticket { padding:10px 14px; border-bottom:1px solid var(--line); cursor:pointer; }
+  .ticket:hover { background:var(--soft); }
+  .ticket.sel { background:#eff6ff; box-shadow: inset 3px 0 0 var(--blue); }
+  .ticket .top { display:flex; gap:6px; align-items:center; flex-wrap:wrap; }
+  .ticket .name { font-weight:600; }
+  .ticket .last { color:var(--muted); font-size:12.5px; margin-top:3px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .chip { display:inline-block; font-size:11px; padding:1px 7px; border-radius:10px; background:var(--grey-bg); color:var(--ink); white-space:nowrap; }
+  .chip.vip { background:#fde68a; color:#78350f; font-weight:600; }
+  .chip.ch-web { background:#dbeafe; color:#1e40af; } .chip.ch-voice { background:var(--violet-bg); color:var(--violet); }
+  .chip.ch-email { background:#cffafe; color:#155e75; } .chip.ch-whatsapp { background:var(--green-bg); color:var(--green); }
+  .st-open,.st-executed { background:var(--green-bg); color:var(--green); }
+  .st-waiting_customer,.st-pending_confirmation,.st-pending_approval,.st-executing { background:var(--amber-bg); color:var(--amber); }
+  .st-escalated,.st-blocked,.st-failed { background:var(--red-bg); color:var(--red); }
+  .st-resolved,.st-rejected,.st-merged { background:var(--grey-bg); color:var(--muted); }
+  .chip.human { background:var(--violet-bg); color:var(--violet); font-weight:600; }
+  #detail-head { padding:12px 16px; border-bottom:1px solid var(--line); }
+  #detail-head .who { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+  #detail-head .who b { font-size:16px; }
+  #detail-head .orders { color:var(--muted); font-size:12.5px; margin-top:4px; }
+  .banner { max-height:28vh; overflow-y:auto; margin:10px 16px 0; padding:10px 12px; border-radius:10px; background:var(--red-bg); color:#7f1d1d; font-size:13px; }
+  .banner b { display:block; margin-bottom:2px; }
+  .banner dl { display:grid; grid-template-columns: 80px 1fr; gap:2px 8px; margin:6px 0 0; }
+  .banner dt { font-weight:600; } .banner dd { margin:0; }
+  #timeline { padding:12px 16px; display:flex; flex-direction:column; gap:8px; }
+  .ev { border:1px solid var(--line); border-radius:10px; padding:8px 11px; max-width:88%; }
+  .ev .meta { font-size:11.5px; color:var(--muted); display:flex; gap:6px; align-items:center; flex-wrap:wrap; margin-bottom:3px; }
+  .ev.customer { align-self:flex-start; background:var(--soft); }
+  .ev.ai { align-self:flex-end; background:#eff6ff; border-color:#bfdbfe; }
+  .ev.human { align-self:flex-end; background:var(--violet-bg); border-color:#ddd6fe; }
+  .ev .orig { color:var(--muted); font-size:12.5px; margin-top:4px; border-top:1px dashed var(--line); padding-top:4px; }
+  .ev.action { align-self:center; max-width:94%; width:94%; background:var(--panel); border-style:dashed; font-size:13px; }
+  .ev.action .what { font-weight:600; }
+  .ev.action .why { color:var(--muted); font-size:12px; }
+  #takeover { border-top:1px solid var(--line); padding:10px 16px; display:flex; flex-direction:column; gap:8px; background:var(--soft); }
+  #takeover .row { display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+  #takeover textarea { width:100%; min-height:54px; border:1px solid var(--line); border-radius:8px; padding:7px 9px; resize:vertical; }
+  #takeover input { flex:1; min-width:140px; border:1px solid var(--line); border-radius:8px; padding:5px 9px; }
+  .card { margin:10px 12px; border:1px solid var(--line); border-radius:10px; padding:10px 12px; }
+  .card.vip { border-color:#fcd34d; box-shadow: inset 3px 0 0 #f59e0b; }
+  .card .t { display:flex; gap:6px; align-items:center; flex-wrap:wrap; }
+  .card .amt { font-size:18px; font-weight:700; margin:4px 0; }
+  .card .rule { font-size:12px; color:var(--amber); }
+  .card .msgs { font-size:12px; color:var(--muted); margin:6px 0; border-left:2px solid var(--line); padding-left:8px; }
+  .card .msgs div { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .card .acts { display:flex; gap:6px; margin-top:6px; flex-wrap:wrap; }
+  .card input { width:100%; border:1px solid var(--line); border-radius:8px; padding:5px 8px; margin-top:6px; }
+  .empty { color:var(--muted); padding:16px; text-align:center; font-size:13px; }
+  footer { position:fixed; bottom:0; left:0; right:0; background:#0f172a; color:#cbd5e1; font-size:12px; padding:7px 18px;
+           display:flex; gap:16px; align-items:center; overflow-x:auto; white-space:nowrap; }
+  footer b { color:#fff; font-weight:600; }
+  footer .lane { display:inline-flex; align-items:center; gap:5px; }
+  footer .dot { width:8px; height:8px; border-radius:50%; background:#22c55e; display:inline-block; }
+  footer .dot.cool { background:#f59e0b; } footer .dot.off { background:#ef4444; }
+  footer .sep { width:1px; align-self:stretch; background:#334155; }
+  .toast { position:fixed; right:18px; bottom:48px; background:#111827; color:#fff; padding:9px 13px; border-radius:9px; font-size:13px; opacity:0; transition:opacity .2s; }
+  .toast.show { opacity:.95; }
+  @media (max-width: 1100px) { main { grid-template-columns: 1fr; height:auto; } .col { max-height:70vh; } }
+</style>
+</head>
+<body>
+<header>
+  <h1 id="product">ResolveAI <span>· Support desk</span></h1>
+  <div class="grow"></div>
+  <label>You are <select id="human"></select></label>
+  <a href="/static/chat.html" target="_blank">Customer chat ↗</a>
+  <a href="/static/voice.html" target="_blank">Voice ↗</a>
+</header>
+<main>
+  <section class="col">
+    <h2>Tickets <span class="count" id="tcount">0</span></h2>
+    <div class="scroll" id="tickets"></div>
+  </section>
+  <section class="col">
+    <div id="detail-head"><div class="empty">Select a ticket to see its timeline.</div></div>
+    <div id="esc"></div>
+    <div class="scroll"><div id="timeline"></div></div>
+    <div id="takeover" hidden></div>
+  </section>
+  <section class="col">
+    <h2>Needs attention <span class="count" id="qcount">0</span></h2>
+    <div class="scroll" id="queue"></div>
+  </section>
+</main>
+<footer id="footer">Loading meters…</footer>
+<div class="toast" id="toast"></div>
+<script>
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" }[c]));
+const store = { get(k) { try { return localStorage.getItem(k); } catch { return null; } }, set(k, v) { try { localStorage.setItem(k, v); } catch {} } };
+let selected = null, humans = [];
+const TOOL = { verify_identity:"Identity check", get_order:"Order lookup", get_tracking:"Tracking lookup", issue_refund:"Refund",
+  create_reship:"Replacement shipment", cancel_order:"Cancel order", send_notification:"Notification", confirm_action:"Customer confirmed",
+  escalate:"Escalated to a human", human_takeover:"Human took over", human_handback:"Handed back to AI", human_resolve:"Resolved by human" };
+const time = (iso) => iso ? new Date(iso).toLocaleTimeString([], { hour:"2-digit", minute:"2-digit", second:"2-digit" }) : "";
+const rs = (n) => "Rs " + Number(n).toLocaleString("en-IN");
+
+async function api(path, body) {
+  const r = await fetch(path, body ? { method:"POST", headers:{ "content-type":"application/json" }, body:JSON.stringify(body) } : {});
+  const d = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(d.detail || r.statusText);
+  return d;
+}
+function toast(msg) { const t = $("toast"); t.textContent = msg; t.classList.add("show"); setTimeout(() => t.classList.remove("show"), 2600); }
+const me = () => $("human").value;
+
+async function init() {
+  const cfg = await api("/api/config");
+  humans = cfg.humans;
+  $("product").innerHTML = `${esc(cfg.product)} <span>· Support desk</span>`;
+  $("human").innerHTML = humans.map((h) => `<option>${esc(h)}</option>`).join("");
+  if (humans.includes(store.get("ra_human"))) $("human").value = store.get("ra_human");
+  $("human").onchange = () => store.set("ra_human", me());
+  await Promise.all([loadTickets(), loadQueue(), loadMeters()]);
+  if (new URLSearchParams(location.search).has("nosse")) return;  // static screenshots only
+  const es = new EventSource("/api/events");
+  es.onmessage = (ev) => { const e = JSON.parse(ev.data); schedule(e.ticket_id); };
+  setInterval(loadMeters, 5000);
+}
+
+let timer = null, dirtyTicket = false;
+function schedule(ticketId) {
+  if (selected && ticketId === selected) dirtyTicket = true;
+  clearTimeout(timer);
+  timer = setTimeout(() => { loadTickets(); loadQueue(); loadMeters(); if (dirtyTicket) { dirtyTicket = false; loadTicket(selected); } }, 250);
+}
+
+async function loadTickets() {
+  const rows = await api("/api/tickets");
+  $("tcount").textContent = rows.length;
+  $("tickets").innerHTML = rows.length ? rows.map((t) => `
+    <div class="ticket ${t.id === selected ? "sel" : ""}" data-id="${t.id}">
+      <div class="top"><span class="name">${esc(t.customer)}</span>${t.tier === "vip" ? '<span class="chip vip">VIP</span>' : ""}
+        <span class="chip st-${t.status}">${t.status.replace("_", " ")}</span>${t.mode === "human" ? '<span class="chip human">human</span>' : ""}</div>
+      <div class="top" style="margin-top:4px">${t.channels.map((c) => `<span class="chip ch-${c}">${c}</span>`).join("")}
+        ${t.language && t.language !== "en-IN" ? `<span class="chip">${esc(t.language)}</span>` : ""}
+        ${t.pending ? `<span class="chip st-pending_approval">${t.pending} pending</span>` : ""}
+        <span style="flex:1"></span><small style="color:var(--muted)">${time(t.updated_at)}</small></div>
+      <div class="last">${esc(t.last)}</div>
+    </div>`).join("") : '<div class="empty">No tickets yet. Open the customer chat to start one.</div>';
+  document.querySelectorAll(".ticket").forEach((el) => el.onclick = () => { selected = el.dataset.id; loadTickets(); loadTicket(selected); });
+}
+
+function actionLine(a) {
+  const args = a.args || {};
+  const bits = [args.order_number, args.amount != null ? rs(args.amount) : null, args.reason, args.note].filter(Boolean).map(esc).join(" · ");
+  const d = a.decision || {};
+  const who = a.decided_by ? ` · decided by ${esc(a.decided_by)}${a.decision_note ? `: “${esc(a.decision_note)}”` : ""}` : "";
+  const res = a.result && a.result.systems ? ` · systems: ${a.result.systems.join(", ")}` : "";
+  return `<div class="ev action"><div class="meta"><span class="chip st-${a.status}">${a.status.replace("_", " ")}</span>
+    <span>${time(a.created_at)}</span><span>${a.channel ? `<span class="chip ch-${a.channel}">${a.channel}</span>` : ""}</span></div>
+    <div class="what">${esc(TOOL[a.tool] || a.tool)}${bits ? ` — ${bits}` : ""}</div>
+    <div class="why">Rule <b>${esc(d.rule_id)}</b> → ${esc(d.result)}: ${esc(d.reason)}${who}${res}</div></div>`;
+}
+
+function messageLine(m) {
+  const label = m.author === "customer" ? "Customer" : m.author === "human" ? `${esc(m.author_name || "Human")} (human)` : `AI${m.meta && m.meta.lane ? " · " + esc(m.meta.lane.split(":")[1]) : ""}`;
+  const translated = m.text !== m.text_en;
+  const flags = [m.meta && m.meta.translation_failed ? '<span class="chip st-blocked">translation failed → English</span>' : "",
+                 m.meta && m.meta.latency_s ? `<span>${m.meta.latency_s}s</span>` : ""].join("");
+  return `<div class="ev ${m.author}"><div class="meta"><b>${label}</b><span class="chip ch-${m.channel}">${m.channel}</span>
+    ${m.language && m.language !== "en-IN" ? `<span class="chip">${esc(m.language)}</span>` : ""}<span>${time(m.created_at)}</span>${flags}</div>
+    <div>${esc(m.text_en)}</div>${translated ? `<div class="orig">${m.author === "customer" ? "Original" : "Sent"}: ${esc(m.text)}</div>` : ""}</div>`;
+}
+
+async function loadTicket(id) {
+  if (!id) return;
+  const d = await api(`/api/tickets/${id}`);
+  const t = d.ticket, c = d.customer;
+  $("detail-head").innerHTML = `<div class="who"><b>${esc(c ? c.name : "Unverified visitor")}</b>${c && c.tier === "vip" ? '<span class="chip vip">VIP</span>' : ""}
+      <span class="chip st-${t.status}">${t.status.replace("_", " ")}</span>${t.mode === "human" ? '<span class="chip human">human mode</span>' : ""}
+      ${t.channels.map((ch) => `<span class="chip ch-${ch}">${ch}</span>`).join("")}<span class="chip">${esc(t.language || "en-IN")}</span>
+      <span class="chip">model calls ${t.model_calls || 0}</span></div>
+    <div class="orders">${c ? esc(c.email) + " · " : ""}${d.orders.map((o) => `${esc(o.order_number)} ${esc(o.status)} ${rs(o.total)}${o.refund_total ? ` (refunded ${rs(o.refund_total)})` : ""}`).join(" · ") || "No verified orders"}</div>`;
+  const e = t.escalation;
+  if (e && t.status === "escalated" || (e && t.mode === "human")) {
+    const h = e.handoff_summary;
+    $("esc").innerHTML = `<div class="banner"><b>Escalated: ${esc(e.rule_id)}${e.assignee ? ` · with ${esc(e.assignee)}` : ""}</b>${esc(e.reason)}
+      ${h ? `<dl><dt>Issue</dt><dd>${esc(h.issue)}</dd><dt>Tried</dt><dd>${esc(h.tried)}</dd><dt>Mood</dt><dd>${esc(h.mood)}</dd><dt>Next step</dt><dd>${esc(h.next_step)}</dd></dl>` : "<div>Handoff summary is being written…</div>"}</div>`;
+  } else { $("esc").innerHTML = ""; }
+  $("timeline").innerHTML = d.timeline.map((x) => x.type === "message" ? messageLine(x) : actionLine(x)).join("") || '<div class="empty">No messages yet.</div>';
+  const sc = $("timeline").parentElement; sc.scrollTop = sc.scrollHeight;
+  renderTakeover(t);
+}
+
+function renderTakeover(t) {
+  const box = $("takeover");
+  box.hidden = t.status === "resolved" || t.status === "merged";
+  if (t.mode !== "human") {
+    box.innerHTML = `<div class="row"><span style="flex:1;color:var(--muted)">The AI agent is handling this ticket.</span>
+      <button class="primary" id="tk">Take over</button></div>`;
+    $("tk").onclick = () => act(`/api/tickets/${t.id}/takeover`, {}, "You took over the ticket");
+    return;
+  }
+  box.innerHTML = `<textarea id="rtext" placeholder="Reply in English. It is translated to the customer's language and sent on their channel."></textarea>
+    <div class="row"><button class="primary" id="rsend">Send reply</button><button id="rres">Resolve</button>
+    <input id="rnote" placeholder="Note for the AI when handing back"><button id="rback">Hand back to AI</button></div>`;
+  $("rsend").onclick = () => { const text = $("rtext").value.trim(); if (text) act(`/api/tickets/${t.id}/reply`, { text }, "Reply sent"); };
+  $("rres").onclick = () => act(`/api/tickets/${t.id}/resolve`, { note: $("rnote").value }, "Ticket resolved");
+  $("rback").onclick = () => act(`/api/tickets/${t.id}/handback`, { note: $("rnote").value }, "Handed back to the AI");
+}
+
+async function act(path, body, msg) {
+  try { await api(path, { name: me(), note: "", text: "", ...body }); toast(msg); }
+  catch (e) { toast("Not done: " + e.message); }
+  loadTickets(); loadQueue(); if (selected) loadTicket(selected);
+}
+
+async function loadQueue() {
+  const q = await api("/api/queue");
+  $("qcount").textContent = q.approvals.length + q.escalations.length;
+  const cards = q.approvals.map((a) => `
+    <div class="card ${a.tier === "vip" ? "vip" : ""}">
+      <div class="t"><b>${esc(a.customer)}</b>${a.tier === "vip" ? '<span class="chip vip">VIP</span>' : ""}<span class="chip st-pending_approval">approval</span>
+        <span style="flex:1"></span><small style="color:var(--muted)">${time(a.created_at)}</small></div>
+      <div class="amt">${esc(TOOL[a.tool] || a.tool)} ${a.args.amount != null ? rs(a.args.amount) : ""}</div>
+      <div>${esc(a.args.order_number || "")} · ${esc(a.args.reason || "")}</div>
+      <div class="rule">Held by rule <b>${esc(a.rule_id)}</b>: ${esc(a.reason)}</div>
+      ${a.summary ? `<div style="font-size:12.5px;margin-top:4px">${esc(typeof a.summary === "string" ? a.summary : a.summary.issue)}</div>` : ""}
+      <div class="msgs">${a.last_messages.map((m) => `<div><b>${esc(m.author)}:</b> ${esc(m.text_en)}</div>`).join("")}</div>
+      <input placeholder="Note (sent to the customer on reject)" data-note="${a.action_id}">
+      <div class="acts"><button class="ok" data-approve="${a.action_id}">Approve</button><button class="danger" data-reject="${a.action_id}">Reject</button>
+        <button data-open="${a.ticket_id}">Open ticket</button></div>
+    </div>`).join("") + q.escalations.map((e) => `
+    <div class="card ${e.tier === "vip" ? "vip" : ""}">
+      <div class="t"><b>${esc(e.customer)}</b>${e.tier === "vip" ? '<span class="chip vip">VIP</span>' : ""}<span class="chip st-escalated">escalated</span></div>
+      <div class="rule" style="color:var(--red)">Rule <b>${esc(e.rule_id)}</b>: ${esc(e.reason)}</div>
+      ${e.handoff_summary ? `<div style="font-size:12.5px;margin-top:4px"><b>Issue:</b> ${esc(e.handoff_summary.issue)}<br><b>Next:</b> ${esc(e.handoff_summary.next_step)}</div>` : ""}
+      <div class="acts"><button class="primary" data-take="${e.ticket_id}">Take over</button><button data-open="${e.ticket_id}">Open ticket</button></div>
+    </div>`).join("");
+  $("queue").innerHTML = cards || '<div class="empty">Nothing needs a human right now.</div>';
+  document.querySelectorAll("[data-approve]").forEach((b) => b.onclick = () => { b.disabled = true; act(`/api/actions/${b.dataset.approve}/approve`, { note: noteFor(b.dataset.approve) }, "Approved and executed"); });
+  document.querySelectorAll("[data-reject]").forEach((b) => b.onclick = () => act(`/api/actions/${b.dataset.reject}/reject`, { note: noteFor(b.dataset.reject) }, "Rejected; customer told"));
+  document.querySelectorAll("[data-take]").forEach((b) => b.onclick = () => { selected = b.dataset.take; act(`/api/tickets/${b.dataset.take}/takeover`, {}, "You took over the ticket"); });
+  document.querySelectorAll("[data-open]").forEach((b) => b.onclick = () => { selected = b.dataset.open; loadTickets(); loadTicket(selected); });
+}
+const noteFor = (id) => (document.querySelector(`[data-note="${id}"]`) || {}).value || "";
+
+async function loadMeters() {
+  const [m, k] = await Promise.all([api("/api/meters"), api("/api/metrics")]);
+  const lanes = m.lanes.map((l) => {
+    const cls = l.daily_off ? "off" : l.cooling_s > 0 ? "cool" : "";
+    const state = l.daily_off ? "off today" : l.cooling_s > 0 ? `cooling ${l.cooling_s}s` : "ok";
+    return `<span class="lane" title="${esc(l.last_error)}"><span class="dot ${cls}"></span>${esc(l.lane.split(":")[1])} <b>${l.today}${l.daily_limit ? "/" + l.daily_limit : ""}</b> ${state}</span>`;
+  }).join("");
+  const s = m.sarvam;
+  $("footer").innerHTML = `<span>LLM lanes (calls today)</span>${lanes}<span class="sep"></span>
+    <span>Sarvam <b>Rs ${s.spent_inr} spent</b> · Rs ${s.left_inr} left of ${s.budget_inr}</span><span class="sep"></span>
+    <span>Approvals <b>${k.approved}</b> · rejections <b>${k.rejected}</b> · takeovers <b>${k.takeovers}</b> · blocked <b>${k.blocked_actions}</b>${k.median_time_to_decision_s != null ? ` · decision ${k.median_time_to_decision_s}s` : ""}</span>`;
+}
+
+init().then(() => { const p = new URLSearchParams(location.search).get('t'); if (p) { selected = p; loadTickets(); loadTicket(p); } });
+</script>
+</body>
+</html>

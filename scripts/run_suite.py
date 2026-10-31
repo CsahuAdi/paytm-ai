@@ -21,7 +21,7 @@ from app import config  # noqa: E402
 from tests.cases import CASES  # noqa: E402
 
 mongo = MongoClient(config.MONGO_URI)[config.MONGO_DB]
-PACE_S = 3.0
+PACE_S = 5.0
 
 
 class Runner:
@@ -153,6 +153,8 @@ class Runner:
             return None if mongo.messages.count_documents({f"meta.{key}": {"$exists": True, "$ne": None}}) else f"no message with meta.{key}"
         if kind == "lane_used":
             return None if any(rest[0] in lane for lane in self.lanes) else f"lane {rest[0]} not used: {self.lanes}"
+        if kind == "lane_not_used":
+            return None if all(rest[0] not in lane for lane in self.lanes) else f"lane {rest[0]} should have been skipped: {self.lanes}"
         if kind == "same_ticket_channels":
             chans = set((t or {}).get("channels", []))
             return None if set(rest[0]) <= chans else f"ticket channels {chans} missing {rest[0]}"

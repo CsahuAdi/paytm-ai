@@ -41,7 +41,8 @@ class OpenAISession:
                 break
             except openai.BadRequestError as e:
                 # Groq rejects a hallucinated tool name server-side (tool_use_failed): that is the one repair.
-                if attempt == 0 and ("tool_use_failed" in str(e) or "tool call validation failed" in str(e).lower()):
+                text = str(e).lower()
+                if attempt == 0 and ("tool_use_failed" in text or "tool call validation failed" in text or "did not call a tool" in text):
                     continue
                 raise _failure(e) from e
             except Exception as e:  # noqa: BLE001

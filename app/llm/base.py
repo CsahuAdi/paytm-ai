@@ -35,7 +35,8 @@ class LaneFailure(Exception):
     detail: str = field(default="")
 
     def __str__(self) -> str:
-        return f"{self.reason} (status={self.status}) {self.detail[:200]}"
+        retry = f" retry_after={self.retry_after}s" if self.retry_after else ""
+        return f"{self.reason} (status={self.status}{retry}) {self.detail[:200]}"
 
 
 class Session(Protocol):
