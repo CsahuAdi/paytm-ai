@@ -1,0 +1,66 @@
+# Kirana pack: a neighbourhood store's customer desk, reached through a SIMULATED "via Paytm" channel (fake data).
+# Config for everything except the custom coupon logic, which is two developer plugins (plugins/kirana.py).
+name: kirana
+product: Sharma Kirana
+persona: You are the customer-care assistant of Sharma Kirana, a neighbourhood grocery store. Customers reach you through a simulated "via Paytm" chat (a hackathon demo with fake data; not affiliated with Paytm).
+policy_file: policy.md
+default_language: en-IN
+labels: {subject: customer, primary: transactions, money: coupons, title: Merchant desk, reviewer: merchant}
+reviewers: [Sharma]
+channels: [web, paytm]
+
+verification:
+  param: customer_id
+  param_description: Customer ID, e.g. C-101
+  lookup: {collection: customers, field: customer_id}
+  factors: {text: phone_last4, voice: phone_last4}
+  factor_description: Last 4 digits of the phone number
+
+collections:
+  transactions: {owner_field: customer_id}
+  coupons: {owner_field: customer_id}
+  merchants: {}
+
+facts: [transaction_id, coupon_code, amount, date]
+protected_patterns: ['\bT-\d{4}\b', '\bKIRANA-[A-Z0-9]{4}\b', '\bC-\d{3}\b']
+escalation_reasons: [fraud_signal, legal_threat, distress, customer_requested_human]
+plugins: [get_resolution_options, issue_coupon]  # developer plugins; issue_coupon must be granted by an admin
+
+context:
+  in_scope:
+    - {collection: transactions, filter: {}, fields: [txn_id, amount, status, items, date, resolution], limit: 8}
+    - {collection: coupons, filter: {status: issued}, fields: [code, amount, expires_at], limit: 3}
+
+tools:
+  - name: get_transactions
+    label: Transaction lookup
+    description: List the customer's recent Paytm payments at this store.
+    effect: read
+    kind: db
+    params: {}
+    db: {op: find, collection: transactions, filter: {}, fields: [txn_id, amount, status, items, date, resolution], limit: 10}
+
+  - name: refund_to_source
+    label: Refund to source
+    description: Refund a successful payment to its original payment method. Only after get_resolution_options showed the options and the customer chose the refund; they must say yes first.
+    effect: write
+    kind: db
+    params:
+      transaction_id: {type: string, pattern: "^T-\\d{4}$", description: "Transaction ID, e.g. T-9001"}
+    db:
+      op: update
+      collection: transactions
+      filter: {txn_id: "{params.transaction_id}"}
+      as: txn
+      set: {status: refunded, resolution: refund}
+    rule:
+      deny_if:
+        - {rule_id: not_refundable, reason: "Only a successful payment can be refunded here; failed or duplicate charges are reversed by the payments team", when: {field: txn.status, op: "!=", value: success}}
+        - {rule_id: already_resolved, reason: "This payment already has a resolution", when: {field: txn.resolution, op: "!=", value: none}}
+        - {rule_id: options_not_presented, reason: "Show the customer the refund and coupon options first", when: {field: txn.options_presented, op: missing}}
+      tiers:
+        - {when: {field: txn.amount, op: ">", value: 2000}, tier: approve, rule_id: refund_limit, reason: "Refunds above Rs 2000 need the merchant"}
+      tier: confirm
+      rule_id: refund_confirm
+    idempotency: "refund:{params.transaction_id}"
+    result: {transaction_id: "{txn.txn_id}", amount: "{txn.amount}", status: "{after.status}"}
