@@ -5,6 +5,7 @@ idempotency index. Personal collections are always scoped to the verified subjec
 """
 import json
 import re
+from datetime import timedelta
 from typing import Annotated, Any, Literal
 
 from bson import ObjectId
@@ -22,6 +23,24 @@ from app.packs.spec import Pack, Param, ToolDef
 from app.policy import Decision
 from app.tools import TOOL_MODELS as CS_TOOLS
 from app.tools import ConfirmAction, Ctx, SendNotification, confirm_action, escalate, finish, propose, record
+
+RELATIVE_DATE = re.compile(r"^@days_(ago|ahead):(\d+(?:\.\d+)?)$")
+
+
+def resolve_dates(node: Any) -> Any:
+    """Seed files write dates as "@days_ago:N" / "@days_ahead:N" so reset_demo keeps time-based rules eligible."""
+    if isinstance(node, str):
+        m = RELATIVE_DATE.match(node)
+        if m:
+            delta = timedelta(days=float(m.group(2)))
+            return now() - delta if m.group(1) == "ago" else now() + delta
+        return node
+    if isinstance(node, dict):
+        return {k: resolve_dates(v) for k, v in node.items()}
+    if isinstance(node, list):
+        return [resolve_dates(v) for v in node]
+    return node
+
 
 MODEL_ONLY = {"pattern", "maxLength", "minLength", "minimum", "maximum"}  # enforced by Pydantic, hidden from LLM schemas
 
@@ -151,6 +170,15 @@ class Runtime:
             await record(ctx, name, params, d, "blocked")
             return {"blocked": True, "rule_id": d.rule_id, "reason": d.reason}
         from app import grants
+        if plugin.effect == "read":  # no hold, no idempotency key: a read can be repeated and always returns its result
+            decision = await plugin.check(params, ctx.customer)
+            if decision.result == "deny":
+                await record(ctx, name, params, decision, "blocked")
+                return {"blocked": True, "rule_id": decision.rule_id, "reason": decision.reason}
+            result = await plugin.run({"_id": None, "tool": name, "args": params, "ticket_id": ctx.ticket["_id"],
+                                       "customer_id": ctx.customer["_id"]}, ctx.customer)
+            await record(ctx, name, params, decision, "executed", result)
+            return result
         decision = await grants.adjust(name, await plugin.check(params, ctx.customer))
         return await self._hold(ctx, name, params, decision, f"{self.pack.name}:{ctx.ticket['_id']}:{plugin.idempotency(params)}")
 
@@ -322,6 +350,7 @@ class Runtime:
         await self.ensure_indexes()
         counts = {}
         for name, docs in seed.items():
+            docs = resolve_dates(docs)
             for d in docs:
                 d.setdefault("_id", ObjectId())
                 d.setdefault("created_at", now())

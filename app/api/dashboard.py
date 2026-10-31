@@ -50,12 +50,17 @@ async def _customers(ids: list[Any]) -> dict[Any, dict[str, Any]]:
 async def ui_config() -> dict:
     rt = registry.RUNTIME
     labels = {"subject": "customer", "primary": "orders", "money": "refunds", "title": "Support desk"}
-    roles = {n: "admin" if n in config.ADMINS else "reviewer" for n in config.HUMAN_AGENTS}
+    pack_label = rt.pack.labels.get("reviewer", "reviewer") if rt else "reviewer"  # e.g. "merchant" for the kirana pack
+    roles = {n: "admin" if n in config.ADMINS else (pack_label if rt and n in rt.pack.reviewers else "reviewer") for n in config.HUMAN_AGENTS}
     if rt is None:
         return {"product": config.PRODUCT_NAME, "humans": config.HUMAN_AGENTS, "roles": roles, "languages": config.LANGUAGES,
-                "pack": None, "labels": labels, "tool_labels": {}}
+                "pack": None, "labels": labels, "tool_labels": {}, "features": [], "chat_url": "/static/chat.html", "chat_label": "Customer chat"}
+    paytm = "paytm" in rt.pack.channels
     return {"product": rt.pack.product, "humans": config.HUMAN_AGENTS, "roles": roles, "languages": config.LANGUAGES, "pack": rt.pack.name,
-            "labels": labels | {"title": "Desk"} | rt.pack.labels, "tool_labels": rt.tool_labels()}
+            "labels": labels | {"title": "Desk"} | rt.pack.labels, "tool_labels": rt.tool_labels(),
+            "features": ["paytm_insights"] if "issue_coupon" in rt.plugins else [],
+            "chat_url": "/paytm" if paytm else "/static/chat.html",
+            "chat_label": "Paytm chat (simulated)" if paytm else f"{rt.pack.labels.get('subject', 'customer').capitalize()} chat"}
 
 
 @router.get("/tickets")
@@ -128,6 +133,11 @@ def _outcome_text(action: dict[str, Any], result: dict[str, Any]) -> str:
     if registry.RUNTIME and action["tool"] in registry.RUNTIME.tools:
         label = registry.RUNTIME.tool_labels()[action["tool"]].lower()
         return f"Good news: a staff member approved your {label} request. It has been processed."
+    if registry.RUNTIME and action["tool"] in registry.RUNTIME.plugins:
+        inner = result.get("result") or {}
+        if isinstance(inner, dict) and inner.get("customer_message"):  # a proactive offer carries its own message
+            return inner["customer_message"]
+        return f"Good news: a staff member approved your {registry.RUNTIME.plugins[action['tool']].label.lower()} request. It has been processed."
     if action["tool"] == "issue_refund":
         return f"Good news: a teammate approved your refund of Rs {args['amount']:,} for order {args['order_number']}. It has been processed."
     return f"A teammate approved your request for order {args.get('order_number', '')}. It has been processed."
@@ -144,8 +154,12 @@ async def approve(action_id: str, body: HumanIn) -> dict:
         raise HTTPException(409, "action is not pending approval (already decided, blocked or missing)")
     async with tickets.lock_for(claimed["ticket_id"]):
         result = await run_action(claimed, approved=True)  # re-checks every deny rule against current data
-        await core.deliver(claimed["ticket_id"], _outcome_text(claimed, result), author="ai")
+        proactive = bool((claimed.get("args") or {}).get("proactive"))  # an insight offer the customer never asked for
+        if not (proactive and result.get("blocked")):  # a blocked offer was never promised, so there is nothing to tell them
+            await core.deliver(claimed["ticket_id"], _outcome_text(claimed, result), author="ai")
         await core.settle_status(claimed["ticket_id"])
+        if proactive and not result.get("blocked"):
+            await tickets.set_status(claimed["ticket_id"], "waiting_customer")
     events.publish("approval", claimed["ticket_id"], action_id=action_id, decision="approved", by=name)
     return {"status": "blocked" if result.get("blocked") else "executed", "result": jsonable(result)}
 
@@ -160,8 +174,13 @@ async def reject(action_id: str, body: HumanIn) -> dict:
     if claimed is None:
         raise HTTPException(409, "action is not pending approval")
     note = f" Note from {name}: {body.note}" if body.note else ""
+    proactive = bool((claimed.get("args") or {}).get("proactive"))
     async with tickets.lock_for(claimed["ticket_id"]):
-        await core.deliver(claimed["ticket_id"], f"A teammate reviewed your request and couldn't approve it.{note}", author="ai")
+        if not proactive:
+            await core.deliver(claimed["ticket_id"], f"A teammate reviewed your request and couldn't approve it.{note}", author="ai")
+        elif not await store.db.messages.count_documents({"ticket_id": claimed["ticket_id"], "author": "customer"}):
+            # a rejected insight offer the customer never saw: no notice, and the empty ticket closes
+            await tickets.set_status(claimed["ticket_id"], "resolved", resolution=f"Insight offer rejected by {name}")
         await core.settle_status(claimed["ticket_id"])
     events.publish("approval", claimed["ticket_id"], action_id=action_id, decision="rejected", by=name)
     return {"status": "rejected"}

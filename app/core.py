@@ -56,8 +56,8 @@ SENDERS: dict[str, Sender] = {}
 
 
 async def _auto_verify(inb: Inbound, identity: dict[str, Any]) -> dict[str, Any]:
-    """A WhatsApp number or email sender that matches the customer record verifies on arrival."""
-    if identity.get("verified") or inb.channel not in ("email", "whatsapp"):
+    """A WhatsApp number, Paytm number or email sender that matches the customer record verifies on arrival."""
+    if identity.get("verified") or inb.channel not in ("email", "whatsapp", "paytm"):
         return identity
     query = {"email": inb.sender.lower()} if inb.channel == "email" else {"phone": inb.sender}
     customer = await store.db.customers.find_one(query)
@@ -218,6 +218,9 @@ async def deliver(ticket_id: ObjectId, text_en: str, author: str, author_name: s
     """Async delivery (approval outcome, human reply) on the customer's latest channel, in their language."""
     ticket = await store.db.tickets.find_one({"_id": ticket_id})
     last = await store.db.messages.find_one({"ticket_id": ticket_id, "author": "customer"}, sort=[("created_at", -1)])
+    if last is None and ticket is not None and ticket.get("contact"):  # proactive message on a ticket the customer has not written on yet
+        c = ticket["contact"]
+        last = {"channel": c["channel"], "sender": c["sender"], "meta": {}}
     if ticket is None or last is None:
         return None
     msg = await store_reply(ticket, text_en, last["channel"], "text", [], author=author, session=last.get("sender"), author_name=author_name)

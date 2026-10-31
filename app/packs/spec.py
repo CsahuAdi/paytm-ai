@@ -167,6 +167,8 @@ class Pack(Strict):
     facts: list[str]
     protected_patterns: list[str] = []  # IDs kept verbatim through translation (masked like order numbers)
     plugins: list[str] = []  # developer-written plugin tools this pack may be granted (see plugins/); loaded, not granted
+    reviewers: list[str] = []  # extra named reviewers for this pack (e.g. the merchant); a label, not authentication
+    channels: list[str] = ["web"]  # extra inbound channels this pack enables (e.g. paytm: a simulated chat page)
     escalation_reasons: list[str]
     context: dict[str, list[InScope]] = {}
     tools: list[ToolDef]

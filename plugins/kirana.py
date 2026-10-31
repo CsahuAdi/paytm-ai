@@ -45,8 +45,9 @@ def complaint_amount(txn_amount: float, m: dict[str, Any]) -> int:
     return int(min(m.get("max_coupon", 0), math.floor(txn_amount * (1 + m.get("bonus_pct", 0) / 100))))
 
 
-async def coupon_decision(params: dict[str, Any], member: dict[str, Any] | None) -> tuple[Decision, int]:
-    """Every coupon rule, re-checked at execution. Returns (decision, computed amount)."""
+async def coupon_decision(params: dict[str, Any], member: dict[str, Any] | None, presenting: bool = False) -> tuple[Decision, int]:
+    """Every coupon rule, re-checked at execution. Returns (decision, computed amount).
+    presenting=True skips only the "options shown first" rule (we are the ones showing them); every other rule still applies."""
     m = await merchant()
     source = params.get("source", "complaint")
     if member is None:
@@ -63,7 +64,7 @@ async def coupon_decision(params: dict[str, Any], member: dict[str, Any] | None)
             return Decision("deny", "no_coupon_for_reversal", f"A {txn['status']} payment gets a reversal or escalation, never a coupon"), 0
         if txn.get("resolution", "none") != "none":
             return Decision("deny", "already_resolved", "This payment already has a resolution"), 0
-        if not (txn.get("options_presented") or {}).get("coupon"):
+        if not presenting and not (txn.get("options_presented") or {}).get("coupon"):
             return Decision("deny", "options_not_presented", "Refund and coupon must be shown together first"), 0
         amount, tier, rule = complaint_amount(txn["amount"], m), "confirm", "coupon_choice"
     window = int(m.get("coupon_window_days", 14))
@@ -105,8 +106,8 @@ class ResolutionOptions:
         if not granted:
             coupon_reason = "Coupons are not available right now"
         else:
-            decision, amount = await coupon_decision({"transaction_id": txn["txn_id"]} | {"_presenting": True}, member)
-            if decision.result == "deny" and decision.rule_id != "options_not_presented":
+            decision, amount = await coupon_decision({"transaction_id": txn["txn_id"]}, member, presenting=True)
+            if decision.result == "deny":
                 coupon_reason = decision.reason
             else:
                 coupon = {"amount": amount, "valid_days": int(m.get("coupon_valid_days", 14)),
